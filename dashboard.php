@@ -6,7 +6,7 @@ require_once __DIR__ . '/includes/auth.php';
 require_once __DIR__ . '/includes/permissions.php';
 
 $user = requireAuthenticatedUser();
-$isAdmin = isAdminUser($user);
+$canOpenPanel = canOpenManagementPanel($user);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -32,8 +32,8 @@ $isAdmin = isAdminUser($user);
         <p><strong>Role MDT :</strong> <?= htmlspecialchars((string) ($user['role'] ?? 'user'), ENT_QUOTES, 'UTF-8') ?></p>
       </div>
 
-      <?php if ($isAdmin): ?>
-        <a href="/admin/index.php" class="admin-link">Panel admin</a>
+      <?php if ($canOpenPanel): ?>
+        <a href="/admin/index.php" class="primary-button" style="display:block;text-align:center;text-decoration:none;margin-bottom:12px;">Panel de gestion</a>
       <?php endif; ?>
 
       <button type="button" id="logoutButton" class="primary-button">Déconnexion</button>

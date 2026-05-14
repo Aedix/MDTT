@@ -1,0 +1,25 @@
+[Thu May 14 04:02:04.335974 2026] [ssl:warn] [pid 2571568] AH01909: mdt-fanta.rh-web.fr:443:0 server certificate does NOT include an ID which matches the server name
+[Thu May 14 10:35:07.265048 2026] [ssl:warn] [pid 2571568] AH01909: mdt-fanta.rh-web.fr:443:0 server certificate does NOT include an ID which matches the server name
+[Thu May 14 13:10:26.657442 2026] [ssl:warn] [pid 2571568] AH01909: mdt-fanta.rh-web.fr:443:0 server certificate does NOT include an ID which matches the server name
+[Thu May 14 13:10:52.914849 2026] [ssl:warn] [pid 2571568] AH01909: mdt-fanta.rh-web.fr:443:0 server certificate does NOT include an ID which matches the server name
+[Thu May 14 13:10:58.754100 2026] [ssl:warn] [pid 2571568] AH01909: mdt-fanta.rh-web.fr:443:0 server certificate does NOT include an ID which matches the server name
+[Thu May 14 13:14:07.654170 2026] [ssl:warn] [pid 2571568] AH01909: mdt-fanta.rh-web.fr:443:0 server certificate does NOT include an ID which matches the server name
+[Thu May 14 16:11:37.213986 2026] [ssl:warn] [pid 2571568] AH01909: mdt-fanta.rh-web.fr:443:0 server certificate does NOT include an ID which matches the server name
+[Thu May 14 16:14:20.820371 2026] [ssl:warn] [pid 2571568] AH01909: mdt-fanta.rh-web.fr:443:0 server certificate does NOT include an ID which matches the server name
+[Thu May 14 16:15:20.560916 2026] [ssl:warn] [pid 2571568] AH01909: mdt-fanta.rh-web.fr:443:0 server certificate does NOT include an ID which matches the server name
+[Thu May 14 16:21:47.843618 2026] [ssl:warn] [pid 2571568] AH01909: mdt-fanta.rh-web.fr:443:0 server certificate does NOT include an ID which matches the server name
+[Thu May 14 18:13:14.287920 2026] [ssl:warn] [pid 2571568] AH01909: mdt-fanta.rh-web.fr:443:0 server certificate does NOT include an ID which matches the server name
+[Thu May 14 18:14:43.444843 2026] [ssl:warn] [pid 2571568] AH01909: mdt-fanta.rh-web.fr:443:0 server certificate does NOT include an ID which matches the server name
+[Thu May 14 19:06:08.440808 2026] [ssl:warn] [pid 2571568] AH01909: mdt-fanta.rh-web.fr:443:0 server certificate does NOT include an ID which matches the server name
+[Thu May 14 19:09:30.004145 2026] [ssl:warn] [pid 2571568] AH01909: mdt-fanta.rh-web.fr:443:0 server certificate does NOT include an ID which matches the server name
+[Thu May 14 19:09:30.468183 2026] [proxy_fcgi:error] [pid 3864400] [client 88.183.254.24:51868] AH01071: Got error 'Primary script unknown'
+[Thu May 14 19:09:32.180776 2026] [proxy_fcgi:error] [pid 3864400] [client 88.183.254.24:51868] AH01071: Got error 'Primary script unknown'
+[Thu May 14 19:09:33.842643 2026] [proxy_fcgi:error] [pid 3864400] [client 88.183.254.24:51868] AH01071: Got error 'Primary script unknown'
+[Thu May 14 19:09:38.792069 2026] [proxy_fcgi:error] [pid 3864400] [client 88.183.254.24:51868] AH01071: Got error 'Primary script unknown'
+[Thu May 14 19:09:39.712876 2026] [proxy_fcgi:error] [pid 3864400] [client 88.183.254.24:51868] AH01071: Got error 'Primary script unknown'
+[Thu May 14 19:09:39.943908 2026] [proxy_fcgi:error] [pid 3864400] [client 88.183.254.24:51868] AH01071: Got error 'Primary script unknown'
+[Thu May 14 19:11:56.631234 2026] [proxy_fcgi:error] [pid 3864397] [client 88.183.254.24:52049] AH01071: Got error 'Primary script unknown'
+[Thu May 14 19:11:57.388113 2026] [proxy_fcgi:error] [pid 3864397] [client 88.183.254.24:52049] AH01071: Got error 'Primary script unknown'
+[Thu May 14 19:11:57.597705 2026] [proxy_fcgi:error] [pid 3864397] [client 88.183.254.24:52049] AH01071: Got error 'Primary script unknown'
+[Thu May 14 19:11:57.767912 2026] [proxy_fcgi:error] [pid 3864397] [client 88.183.254.24:52049] AH01071: Got error 'Primary script unknown'
+[Thu May 14 19:11:57.922662 2026] [proxy_fcgi:error] [pid 3864397] [client 88.183.254.24:52049] AH01071: Got error 'Primary script unknown'

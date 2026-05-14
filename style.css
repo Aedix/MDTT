@@ -7,6 +7,8 @@
   --accent: #2f80ed;
   --accent-hover: #4b97ff;
   --danger: #ff6b6b;
+  --success: #49d17d;
+  --info: #7fb3ff;
 }
 
 * {
@@ -119,6 +121,14 @@ input:focus {
   color: var(--danger);
 }
 
+.form-message[data-type="success"] {
+  color: var(--success);
+}
+
+.form-message[data-type="info"] {
+  color: var(--info);
+}
+
 .primary-button,
 .secondary-actions button {
   cursor: pointer;
@@ -128,6 +138,7 @@ input:focus {
 }
 
 .primary-button {
+  width: 100%;
   padding: 14px 16px;
   color: white;
   background: var(--accent);
@@ -154,6 +165,23 @@ input:focus {
 .secondary-actions button:hover {
   color: var(--text);
   background: rgba(255, 255, 255, 0.1);
+}
+
+.dashboard-info {
+  margin-bottom: 22px;
+  padding: 16px;
+  border: 1px solid rgba(154, 168, 189, 0.22);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dashboard-info p {
+  margin: 8px 0;
+  color: var(--muted);
+}
+
+.dashboard-info strong {
+  color: var(--text);
 }
 
 @media (max-width: 480px) {

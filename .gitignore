@@ -1,1 +1,3 @@
 .vscode/sftp.json
+includes/config.local.php
+*.log

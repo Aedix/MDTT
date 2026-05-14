@@ -6,6 +6,7 @@ require_once __DIR__ . '/../includes/permissions.php';
 require_once __DIR__ . '/../includes/db.php';
 
 $user = requirePermission('accounts.view');
+$canDeleteAccounts = userHasPermission($user, 'accounts.delete');
 $pdo = getDatabaseConnection();
 
 $users = $pdo->query(
@@ -20,7 +21,7 @@ $users = $pdo->query(
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MDT - Comptes</title>
-  <link rel="stylesheet" href="/style.css?v=4" />
+  <link rel="stylesheet" href="/style.css?v=6" />
 </head>
 <body>
   <main class="login-page">
@@ -29,7 +30,7 @@ $users = $pdo->query(
         <div class="seal">FIB</div>
         <p class="eyebrow">MDT Accounts</p>
         <h1>Gestion des comptes</h1>
-        <p class="subtitle">Validation et désactivation des comptes.</p>
+        <p class="subtitle">Validation, désactivation et suppression des comptes.</p>
       </div>
 
       <p id="formMessage" class="form-message" aria-live="polite"></p>
@@ -42,9 +43,12 @@ $users = $pdo->query(
           <p>Role : <?= htmlspecialchars((string) $account['role'], ENT_QUOTES, 'UTF-8') ?></p>
           <p>Status : <?= ((int) $account['is_active'] === 1) ? 'Actif' : 'En attente / désactivé' ?></p>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;">
             <button type="button" class="primary-button account-status-button" data-user-id="<?= (int) $account['id'] ?>" data-is-active="1">Activer</button>
             <button type="button" class="primary-button account-status-button" data-user-id="<?= (int) $account['id'] ?>" data-is-active="0" style="background:rgba(255,107,107,0.75);">Désactiver</button>
+            <?php if ($canDeleteAccounts): ?>
+              <button type="button" class="primary-button account-delete-button" data-user-id="<?= (int) $account['id'] ?>" data-username="<?= htmlspecialchars($account['username'], ENT_QUOTES, 'UTF-8') ?>" style="background:rgba(160,30,30,0.85);">Supprimer</button>
+            <?php endif; ?>
           </div>
         </div>
       <?php endforeach; ?>
@@ -53,6 +57,6 @@ $users = $pdo->query(
     </section>
   </main>
 
-  <script src="/admin/accounts.js?v=1"></script>
+  <script src="/admin/accounts.js?v=2"></script>
 </body>
 </html>

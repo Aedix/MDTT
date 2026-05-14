@@ -3,8 +3,10 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/includes/auth.php';
+require_once __DIR__ . '/includes/permissions.php';
 
 $user = requireAuthenticatedUser();
+$isAdmin = isAdminUser($user);
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -12,7 +14,7 @@ $user = requireAuthenticatedUser();
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MDT FIB - Dashboard</title>
-  <link rel="stylesheet" href="./style.css?v=3" />
+  <link rel="stylesheet" href="./style.css?v=4" />
 </head>
 <body>
   <main class="login-page">
@@ -26,8 +28,13 @@ $user = requireAuthenticatedUser();
 
       <div class="dashboard-info">
         <p><strong>Service :</strong> <?= htmlspecialchars((string) ($user['service'] ?? 'Non défini'), ENT_QUOTES, 'UTF-8') ?></p>
-        <p><strong>Rank :</strong> <?= htmlspecialchars((string) ($user['rank_name'] ?? 'Non défini'), ENT_QUOTES, 'UTF-8') ?></p>
+        <p><strong>Rank RP :</strong> <?= htmlspecialchars((string) ($user['rank_name'] ?? 'Non défini'), ENT_QUOTES, 'UTF-8') ?></p>
+        <p><strong>Role MDT :</strong> <?= htmlspecialchars((string) ($user['role'] ?? 'user'), ENT_QUOTES, 'UTF-8') ?></p>
       </div>
+
+      <?php if ($isAdmin): ?>
+        <a href="/admin/index.php" class="admin-link">Panel admin</a>
+      <?php endif; ?>
 
       <button type="button" id="logoutButton" class="primary-button">Déconnexion</button>
     </section>

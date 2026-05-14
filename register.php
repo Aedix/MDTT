@@ -6,14 +6,6 @@ require_once __DIR__ . '/includes/db.php';
 
 $pdo = getDatabaseConnection();
 $services = $pdo->query('SELECT id, code, name FROM services WHERE is_active = 1 ORDER BY name ASC')->fetchAll();
-$ranks = $pdo->query(
-    'SELECT r.id, r.name, r.level, s.code AS service_code, s.name AS service_name
-     FROM ranks r
-     INNER JOIN services s ON s.id = r.service_id
-     WHERE r.is_active = 1
-       AND s.is_active = 1
-     ORDER BY s.name ASC, r.level ASC, r.sort_order ASC'
-)->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="fr">
@@ -21,7 +13,7 @@ $ranks = $pdo->query(
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MDT FIB - Création de compte</title>
-  <link rel="stylesheet" href="/style.css?v=4" />
+  <link rel="stylesheet" href="/style.css?v=6" />
 </head>
 <body>
   <main class="login-page">
@@ -50,12 +42,12 @@ $ranks = $pdo->query(
         </div>
 
         <div class="field-group">
-          <label for="rankId">Service / Grade demandé</label>
-          <select id="rankId" name="rankId" required>
-            <option value="">Choisir un grade</option>
-            <?php foreach ($ranks as $rank): ?>
-              <option value="<?= (int) $rank['id'] ?>">
-                <?= htmlspecialchars($rank['service_code'] . ' - ' . $rank['name'], ENT_QUOTES, 'UTF-8') ?>
+          <label for="serviceId">Service demandé</label>
+          <select id="serviceId" name="serviceId" required>
+            <option value="">Choisir un service</option>
+            <?php foreach ($services as $service): ?>
+              <option value="<?= (int) $service['id'] ?>">
+                <?= htmlspecialchars($service['code'] . ' - ' . $service['name'], ENT_QUOTES, 'UTF-8') ?>
               </option>
             <?php endforeach; ?>
           </select>
@@ -69,6 +61,6 @@ $ranks = $pdo->query(
     </section>
   </main>
 
-  <script src="/register.js?v=1"></script>
+  <script src="/register.js?v=2"></script>
 </body>
 </html>

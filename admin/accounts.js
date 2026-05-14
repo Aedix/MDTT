@@ -1,12 +1,13 @@
 const formMessage = document.querySelector('#formMessage');
-const buttons = document.querySelectorAll('.account-status-button');
+const statusButtons = document.querySelectorAll('.account-status-button');
+const deleteButtons = document.querySelectorAll('.account-delete-button');
 
 function setMessage(message, type = 'error') {
   formMessage.textContent = message;
   formMessage.dataset.type = type;
 }
 
-buttons.forEach((button) => {
+statusButtons.forEach((button) => {
   button.addEventListener('click', async () => {
     const userId = Number(button.dataset.userId);
     const isActive = Number(button.dataset.isActive);
@@ -34,6 +35,46 @@ buttons.forEach((button) => {
       }
 
       setMessage(result.message || 'Compte mis à jour.', 'success');
+      window.setTimeout(() => window.location.reload(), 600);
+    } catch (error) {
+      setMessage('Erreur serveur ou réponse invalide.');
+    }
+  });
+});
+
+deleteButtons.forEach((button) => {
+  button.addEventListener('click', async () => {
+    const userId = Number(button.dataset.userId);
+    const username = button.dataset.username || 'cet utilisateur';
+
+    const confirmed = window.confirm(`Supprimer définitivement le compte ${username} ?`);
+
+    if (!confirmed) {
+      return;
+    }
+
+    setMessage('Suppression du compte...', 'info');
+
+    try {
+      const response = await fetch('/api/admin/delete-account.php', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'same-origin',
+        body: JSON.stringify({
+          user_id: userId,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        setMessage(result.message || 'Suppression refusée.');
+        return;
+      }
+
+      setMessage(result.message || 'Compte supprimé.', 'success');
       window.setTimeout(() => window.location.reload(), 600);
     } catch (error) {
       setMessage('Erreur serveur ou réponse invalide.');

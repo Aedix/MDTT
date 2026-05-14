@@ -35,7 +35,11 @@ $canResetPasswords = userHasPermission($user, 'accounts.reset_password');
         <p><strong>Reset passwords :</strong> <?= $canResetPasswords ? 'Oui' : 'Non' ?></p>
       </div>
 
-      <p class="form-message" data-type="info">Les vrais outils seront branchés ici : comptes, grades, services et permissions.</p>
+      <?php if (userHasPermission($user, 'accounts.view')): ?>
+        <a href="/admin/accounts.php" class="primary-button" style="display:block;text-align:center;text-decoration:none;margin-bottom:12px;">Gestion des comptes</a>
+      <?php endif; ?>
+
+      <p class="form-message" data-type="info">Prochaine étape : validation des comptes, puis changement de grade.</p>
 
       <a href="/dashboard.php" class="primary-button" style="display:block;text-align:center;text-decoration:none;">Retour dashboard</a>
     </section>

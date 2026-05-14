@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>MDT FIB - Connexion</title>
+  <link rel="stylesheet" href="./style.css?v=2" />
+</head>
+<body>
+  <main class="login-page">
+    <section class="login-card" aria-label="Panel de connexion MDT FIB">
+      <div class="brand-block">
+        <div class="seal">FIB</div>
+        <p class="eyebrow">Federal Investigation Bureau</p>
+        <h1>MDT Login</h1>
+        <p class="subtitle">Accès sécurisé au terminal interne</p>
+      </div>
+
+      <form id="loginForm" class="login-form">
+        <div class="field-group">
+          <label for="username">Username</label>
+          <input type="text" id="username" name="username" placeholder="Entrez votre username" autocomplete="username" required />
+        </div>
+
+        <div class="field-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" name="password" placeholder="Entrez votre password" autocomplete="current-password" required />
+        </div>
+
+        <p id="formMessage" class="form-message" aria-live="polite"></p>
+
+        <button type="submit" class="primary-button">Connexion</button>
+
+        <div class="secondary-actions">
+          <button type="button" id="forgotPasswordButton">Mot de passe oublié</button>
+          <button type="button" id="createAccountButton">Création de compte</button>
+        </div>
+      </form>
+    </section>
+  </main>
+
+  <script src="./app.js?v=2"></script>
+</body>
+</html>

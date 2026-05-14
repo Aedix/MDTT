@@ -12,9 +12,9 @@ registerForm.addEventListener('submit', async (event) => {
   const username = registerForm.username.value.trim();
   const password = registerForm.password.value;
   const passwordConfirm = registerForm.passwordConfirm.value;
-  const rankId = registerForm.rankId.value;
+  const serviceId = registerForm.serviceId.value;
 
-  if (!username || !password || !passwordConfirm || !rankId) {
+  if (!username || !password || !passwordConfirm || !serviceId) {
     setMessage('Tous les champs sont obligatoires.');
     return;
   }
@@ -32,7 +32,7 @@ registerForm.addEventListener('submit', async (event) => {
         username,
         password,
         password_confirm: passwordConfirm,
-        rank_id: Number(rankId),
+        service_id: Number(serviceId),
       }),
     });
 

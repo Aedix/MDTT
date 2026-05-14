@@ -1,6 +1,5 @@
 const loginForm = document.querySelector('#loginForm');
 const formMessage = document.querySelector('#formMessage');
-const forgotPasswordButton = document.querySelector('#forgotPasswordButton');
 const createAccountButton = document.querySelector('#createAccountButton');
 
 function setMessage(message, type = 'error') {
@@ -43,10 +42,6 @@ loginForm.addEventListener('submit', async (event) => {
   } catch (error) {
     setMessage('Erreur serveur ou réponse invalide. Vérifie la configuration PHP/BDD.');
   }
-});
-
-forgotPasswordButton.addEventListener('click', () => {
-  setMessage('Module mot de passe oublié à créer plus tard.', 'info');
 });
 
 createAccountButton.addEventListener('click', () => {

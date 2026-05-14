@@ -23,7 +23,7 @@ if (!is_array($data)) {
 $username = trim((string) ($data['username'] ?? ''));
 $password = (string) ($data['password'] ?? '');
 $passwordConfirm = (string) ($data['password_confirm'] ?? '');
-$rankId = (int) ($data['rank_id'] ?? 0);
+$serviceId = (int) ($data['service_id'] ?? 0);
 
 if (!preg_match('/^[a-zA-Z0-9_.-]{3,32}$/', $username)) {
     http_response_code(400);
@@ -43,9 +43,9 @@ if ($password !== $passwordConfirm) {
     exit;
 }
 
-if ($rankId <= 0) {
+if ($serviceId <= 0) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Grade demandé invalide.']);
+    echo json_encode(['success' => false, 'message' => 'Service demandé invalide.']);
     exit;
 }
 
@@ -60,21 +60,13 @@ if ($existingStatement->fetch()) {
     exit;
 }
 
-$rankStatement = $pdo->prepare(
-    'SELECT r.name AS rank_name, s.code AS service_code
-     FROM ranks r
-     INNER JOIN services s ON s.id = r.service_id
-     WHERE r.id = :rank_id
-       AND r.is_active = 1
-       AND s.is_active = 1
-     LIMIT 1'
-);
-$rankStatement->execute(['rank_id' => $rankId]);
-$rank = $rankStatement->fetch();
+$serviceStatement = $pdo->prepare('SELECT code FROM services WHERE id = :service_id AND is_active = 1 LIMIT 1');
+$serviceStatement->execute(['service_id' => $serviceId]);
+$service = $serviceStatement->fetch();
 
-if (!$rank) {
+if (!$service) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Grade demandé introuvable.']);
+    echo json_encode(['success' => false, 'message' => 'Service demandé introuvable.']);
     exit;
 }
 
@@ -88,13 +80,13 @@ $insertStatement = $pdo->prepare(
 $insertStatement->execute([
     'username' => $username,
     'password_hash' => $passwordHash,
-    'service' => $rank['service_code'],
-    'rank_name' => $rank['rank_name'],
+    'service' => $service['code'],
+    'rank_name' => 'En attente',
     'role' => 'user',
     'is_active' => 0,
 ]);
 
 echo json_encode([
     'success' => true,
-    'message' => 'Compte créé. Il doit maintenant être validé par un responsable.',
+    'message' => 'Compte créé. Un responsable devra valider le compte et attribuer le grade.',
 ]);

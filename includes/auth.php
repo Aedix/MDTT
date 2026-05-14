@@ -32,6 +32,7 @@ function setAuthenticatedUser(array $user): void
         'username' => $user['username'],
         'service' => $user['service'] ?? null,
         'rank_name' => $user['rank_name'] ?? null,
+        'role' => $user['role'] ?? 'user',
     ];
 }
 

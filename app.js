@@ -50,5 +50,5 @@ forgotPasswordButton.addEventListener('click', () => {
 });
 
 createAccountButton.addEventListener('click', () => {
-  setMessage('Module création de compte à créer plus tard.', 'info');
+  window.location.href = '/register.php';
 });

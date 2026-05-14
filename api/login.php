@@ -53,7 +53,7 @@ if (!preg_match('/^[a-zA-Z0-9_]+$/', $tableName)) {
 
 $pdo = getDatabaseConnection();
 
-$sql = "SELECT id, username, password_hash, service, rank_name, is_active FROM `$tableName` WHERE username = :username LIMIT 1";
+$sql = "SELECT id, username, password_hash, service, rank_name, role, is_active FROM `$tableName` WHERE username = :username LIMIT 1";
 $statement = $pdo->prepare($sql);
 $statement->execute([
     'username' => $username,
@@ -90,5 +90,6 @@ echo json_encode([
         'username' => $user['username'],
         'service' => $user['service'] ?? null,
         'rank_name' => $user['rank_name'] ?? null,
+        'role' => $user['role'] ?? 'user',
     ],
 ]);

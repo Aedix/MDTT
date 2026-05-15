@@ -60,6 +60,12 @@ function promptAndInsert(type) {
   }
 }
 
+function closeMotdEditor() {
+  if (motdForm) motdForm.hidden = true;
+  if (motdView) motdView.hidden = false;
+  if (motdEditButton) motdEditButton.hidden = false;
+}
+
 if (motdEditButton && motdForm && motdView) {
   motdEditButton.addEventListener('click', () => {
     motdForm.hidden = false;
@@ -70,9 +76,7 @@ if (motdEditButton && motdForm && motdView) {
 
 if (motdCancelButton && motdForm && motdEditButton && motdView) {
   motdCancelButton.addEventListener('click', () => {
-    motdForm.hidden = true;
-    motdView.hidden = false;
-    motdEditButton.hidden = false;
+    closeMotdEditor();
     setMotdMessage('');
   });
 }
@@ -118,8 +122,14 @@ if (motdForm) {
         return;
       }
 
-      setMotdMessage(result.message || 'Annonce mise à jour.', 'success');
-      window.setTimeout(() => window.location.reload(), 600);
+      closeMotdEditor();
+      setMotdMessage('');
+
+      if (motdTitleView) {
+        motdTitleView.textContent = title;
+      }
+
+      window.setTimeout(() => window.location.reload(), 350);
     } catch (error) {
       setMotdMessage('Erreur serveur ou réponse invalide.');
     }

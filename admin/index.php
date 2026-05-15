@@ -15,7 +15,7 @@ $canResetPasswords = userHasPermission($user, 'accounts.reset_password');
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MDT FIB - Gestion</title>
-  <link rel="stylesheet" href="/style.css?v=4" />
+  <link rel="stylesheet" href="/style.css?v=8" />
 </head>
 <body>
   <main class="login-page">
@@ -39,7 +39,11 @@ $canResetPasswords = userHasPermission($user, 'accounts.reset_password');
         <a href="/admin/accounts.php" class="primary-button" style="display:block;text-align:center;text-decoration:none;margin-bottom:12px;">Gestion des comptes</a>
       <?php endif; ?>
 
-      <p class="form-message" data-type="info">Prochaine étape : validation des comptes, puis changement de grade.</p>
+      <?php if (userHasPermission($user, 'ranks.view')): ?>
+        <a href="/admin/ranks.php" class="primary-button" style="display:block;text-align:center;text-decoration:none;margin-bottom:12px;">Gestion des grades</a>
+      <?php endif; ?>
+
+      <p class="form-message" data-type="info">Gestion progressive : comptes, grades, puis reset password.</p>
 
       <a href="/dashboard.php" class="primary-button" style="display:block;text-align:center;text-decoration:none;">Retour dashboard</a>
     </section>

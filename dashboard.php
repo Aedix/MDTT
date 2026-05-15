@@ -119,7 +119,7 @@ if ($activeShift) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MDT - <?= htmlspecialchars($activeServiceCode, ENT_QUOTES, 'UTF-8') ?></title>
   <link rel="stylesheet" href="/style.css?v=11" />
-  <link rel="stylesheet" href="/mdt.css?v=3" />
+  <link rel="stylesheet" href="/mdt.css?v=4" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">
   <div class="mdt-shell">
@@ -170,7 +170,7 @@ if ($activeShift) {
             <span><?= htmlspecialchars($activeServiceCode . ' · ' . $activeRankName, ENT_QUOTES, 'UTF-8') ?></span>
           </div>
           <a href="/choose-service.php" class="mdt-button-secondary">Changer service</a>
-          <button type="button" id="shiftButton" class="mdt-button" data-on-duty="<?= $activeShift ? '1' : '0' ?>"><?= $activeShift ? 'Fin de service' : 'Prise de service' ?></button>
+          <button type="button" id="shiftButton" class="mdt-button mdt-shift-button <?= $activeShift ? 'on-duty' : 'off-duty' ?>" data-on-duty="<?= $activeShift ? '1' : '0' ?>"><?= $activeShift ? 'Fin de service' : 'Prise de service' ?></button>
           <button type="button" id="logoutButton" class="mdt-button-danger">Déconnexion</button>
         </div>
       </header>
@@ -180,24 +180,37 @@ if ($activeShift) {
           <div class="mdt-motd-header">
             <div>
               <p class="mdt-kicker">Annonce service</p>
-              <h2><?= htmlspecialchars((string) ($serviceInfo['motd_title'] ?? 'Annonce opérationnelle'), ENT_QUOTES, 'UTF-8') ?></h2>
+              <h2 id="motdTitleView"><?= htmlspecialchars((string) ($serviceInfo['motd_title'] ?? 'Annonce opérationnelle'), ENT_QUOTES, 'UTF-8') ?></h2>
             </div>
-            <span class="mdt-timecode"><?= htmlspecialchars($updatedLabel, ENT_QUOTES, 'UTF-8') ?></span>
+            <div class="mdt-motd-actions">
+              <span class="mdt-timecode"><?= htmlspecialchars($updatedLabel, ENT_QUOTES, 'UTF-8') ?></span>
+              <button type="button" id="motdEditButton" class="mdt-icon-button" title="Modifier l’annonce" aria-label="Modifier l’annonce">✎</button>
+            </div>
           </div>
 
-          <div class="mdt-motd-body bbcode-content"><?= renderBbCode((string) ($serviceInfo['motd_body'] ?? 'Aucune annonce active.')) ?></div>
+          <div id="motdView" class="mdt-motd-body bbcode-content"><?= renderBbCode((string) ($serviceInfo['motd_body'] ?? 'Aucune annonce active.')) ?></div>
 
-          <button type="button" id="motdEditButton" class="mdt-button-secondary">Modifier l’annonce</button>
-          <form id="motdForm" class="mdt-motd-form" hidden>
+          <form id="motdForm" class="mdt-motd-inline-editor" hidden>
             <div class="field-group">
               <label for="motdTitle">Titre</label>
               <input type="text" id="motdTitle" name="title" maxlength="120" value="<?= htmlspecialchars((string) ($serviceInfo['motd_title'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required />
             </div>
-            <div class="field-group">
-              <label for="motdBody">Annonce BBCode</label>
-              <textarea id="motdBody" name="body" maxlength="2000" required><?= htmlspecialchars((string) ($serviceInfo['motd_body'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
-              <small class="mdt-help-text">BBCode supporté : [b], [i], [u], [quote], [code], [list], [url], [img]. Images via URL uniquement pour l’instant.</small>
+
+            <div class="mdt-editor-toolbar" aria-label="Outils de mise en forme BBCode">
+              <button type="button" data-wrap="[b]|[/b]"><strong>B</strong></button>
+              <button type="button" data-wrap="[i]|[/i]"><em>I</em></button>
+              <button type="button" data-wrap="[u]|[/u]"><u>U</u></button>
+              <button type="button" data-wrap="[s]|[/s]"><s>S</s></button>
+              <button type="button" data-wrap="[mark]|[/mark]">Surligner</button>
+              <button type="button" data-wrap="[quote]|[/quote]">Citation</button>
+              <button type="button" data-wrap="[code]|[/code]">Code</button>
+              <button type="button" data-insert="list">Liste</button>
+              <button type="button" data-insert="url">Lien</button>
+              <button type="button" data-insert="image">Image</button>
+              <button type="button" data-insert="file">Fichier</button>
             </div>
+
+            <textarea id="motdBody" name="body" maxlength="2000" required><?= htmlspecialchars((string) ($serviceInfo['motd_body'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
             <p id="motdMessage" class="form-message"></p>
             <div class="mdt-form-actions">
               <button type="submit" class="mdt-button">Sauvegarder</button>
@@ -299,7 +312,7 @@ if ($activeShift) {
       window.location.href = result.redirect || '/index.html';
     });
   </script>
-  <script src="/motd.js?v=1"></script>
+  <script src="/motd.js?v=2"></script>
   <script src="/shift.js?v=1"></script>
 </body>
 </html>

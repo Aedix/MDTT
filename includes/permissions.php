@@ -20,8 +20,22 @@ const FALLBACK_ROLE_PERMISSIONS = [
     'officer' => ['mdt.access'],
     'senior' => ['mdt.access'],
     'user' => ['mdt.access'],
-    'sergeant' => ['mdt.access', 'panel.access', 'accounts.view', 'accounts.activate', 'accounts.deactivate'],
-    'lieutenant' => ['mdt.access', 'panel.access', 'accounts.view', 'accounts.activate', 'accounts.deactivate'],
+    'sergeant' => [
+        'mdt.access',
+        'panel.access',
+        'accounts.view',
+        'accounts.activate',
+        'accounts.deactivate',
+        'accounts.change_rank',
+    ],
+    'lieutenant' => [
+        'mdt.access',
+        'panel.access',
+        'accounts.view',
+        'accounts.activate',
+        'accounts.deactivate',
+        'accounts.change_rank',
+    ],
     'chief' => [
         'mdt.access',
         'panel.access',
@@ -29,6 +43,7 @@ const FALLBACK_ROLE_PERMISSIONS = [
         'accounts.view',
         'accounts.activate',
         'accounts.deactivate',
+        'accounts.delete',
         'accounts.change_rank',
         'ranks.view',
         'ranks.create',
@@ -185,4 +200,9 @@ function isSystemAdminUser(array $user): bool
 function canAssignTechnicalRoles(array $user): bool
 {
     return userHasPermission($user, 'roles.assign');
+}
+
+function isSuperAdminUser(array $user): bool
+{
+    return normalizeRole($user['role'] ?? null) === 'super_admin';
 }

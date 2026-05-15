@@ -8,6 +8,7 @@ require_once __DIR__ . '/includes/db.php';
 
 $user = requireAuthenticatedUser();
 $canOpenPanel = canOpenManagementPanel($user);
+$canUpdateMotd = userHasPermission($user, 'service.motd.update');
 $pdo = getDatabaseConnection();
 
 $activeServiceCode = (string) ($user['active_service_code'] ?? $user['service'] ?? 'MDT');
@@ -15,26 +16,45 @@ $activeServiceName = (string) ($user['active_service_name'] ?? $activeServiceCod
 $activeRankName = (string) ($user['active_rank_name'] ?? $user['rank_name'] ?? 'Non défini');
 $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
 
-$totalUsers = (int) $pdo->query('SELECT COUNT(*) AS total FROM users')->fetch()['total'];
-$activeUsers = (int) $pdo->query('SELECT COUNT(*) AS total FROM users WHERE is_active = 1')->fetch()['total'];
-$pendingUsers = (int) $pdo->query('SELECT COUNT(*) AS total FROM users WHERE is_active = 0')->fetch()['total'];
-$totalRanks = (int) $pdo->query('SELECT COUNT(*) AS total FROM ranks WHERE is_active = 1')->fetch()['total'];
+$serviceInfo = [
+    'motd_title' => 'Annonce opérationnelle',
+    'motd_body' => 'Aucune annonce active pour le moment.',
+    'motd_updated_at' => null,
+];
 
-$serviceUsers = 0;
 try {
-    $serviceUsersStatement = $pdo->prepare(
-        'SELECT COUNT(*) AS total
-         FROM user_services us
-         INNER JOIN services s ON s.id = us.service_id
-         WHERE s.code = :service_code
-           AND us.is_active = 1'
+    $serviceStatement = $pdo->prepare(
+        'SELECT logo_path, motd_title, motd_body, motd_updated_at
+         FROM services
+         WHERE code = :code
+         LIMIT 1'
     );
-    $serviceUsersStatement->execute(['service_code' => $activeServiceCode]);
-    $serviceUsers = (int) $serviceUsersStatement->fetch()['total'];
+    $serviceStatement->execute(['code' => $activeServiceCode]);
+    $serviceRow = $serviceStatement->fetch();
+
+    if ($serviceRow) {
+        $activeServiceLogo = (string) ($serviceRow['logo_path'] ?? $activeServiceLogo);
+        $serviceInfo = array_merge($serviceInfo, $serviceRow);
+    }
 } catch (Throwable $exception) {
-    $fallbackStatement = $pdo->prepare('SELECT COUNT(*) AS total FROM users WHERE service = :service_code');
-    $fallbackStatement->execute(['service_code' => $activeServiceCode]);
-    $serviceUsers = (int) $fallbackStatement->fetch()['total'];
+    // Migration MOTD not installed yet.
+}
+
+$updatedLabel = 'Jamais mis à jour';
+if (!empty($serviceInfo['motd_updated_at'])) {
+    $updatedAt = new DateTime((string) $serviceInfo['motd_updated_at']);
+    $now = new DateTime();
+    $diffSeconds = max(0, $now->getTimestamp() - $updatedAt->getTimestamp());
+
+    if ($diffSeconds < 60) {
+        $updatedLabel = 'Mis à jour il y a moins d’une minute';
+    } elseif ($diffSeconds < 3600) {
+        $updatedLabel = 'Mis à jour il y a ' . floor($diffSeconds / 60) . ' min';
+    } elseif ($diffSeconds < 86400) {
+        $updatedLabel = 'Mis à jour il y a ' . floor($diffSeconds / 3600) . ' h';
+    } else {
+        $updatedLabel = 'Mis à jour il y a ' . floor($diffSeconds / 86400) . ' j';
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -44,7 +64,7 @@ try {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MDT - <?= htmlspecialchars($activeServiceCode, ENT_QUOTES, 'UTF-8') ?></title>
   <link rel="stylesheet" href="/style.css?v=11" />
-  <link rel="stylesheet" href="/mdt.css?v=1" />
+  <link rel="stylesheet" href="/mdt.css?v=2" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">
   <div class="mdt-shell">
@@ -65,10 +85,9 @@ try {
 
       <nav class="mdt-nav" aria-label="Navigation MDT">
         <a href="/dashboard.php" class="mdt-nav-link active">Dashboard</a>
-        <a href="#" class="mdt-nav-link disabled">Agents <span class="mdt-placeholder">Soon</span></a>
+        <a href="#" class="mdt-nav-link disabled">Recherches <span class="mdt-placeholder">Soon</span></a>
         <a href="#" class="mdt-nav-link disabled">Dossiers <span class="mdt-placeholder">Soon</span></a>
         <a href="#" class="mdt-nav-link disabled">Rapports <span class="mdt-placeholder">Soon</span></a>
-        <a href="#" class="mdt-nav-link disabled">Recherches <span class="mdt-placeholder">Soon</span></a>
         <a href="#" class="mdt-nav-link disabled">Divisions <span class="mdt-placeholder">Soon</span></a>
         <a href="#" class="mdt-nav-link disabled">Paramètres <span class="mdt-placeholder">Soon</span></a>
         <?php if ($canOpenPanel): ?>
@@ -100,67 +119,49 @@ try {
       </header>
 
       <main class="mdt-content">
-        <section class="mdt-hero">
-          <article class="mdt-card mdt-hero-main">
-            <p class="mdt-kicker">Session active</p>
-            <h2>Bienvenue dans le terminal <?= htmlspecialchars($activeServiceCode, ENT_QUOTES, 'UTF-8') ?></h2>
-            <p>
-              Ce dashboard est la base du service actif. Les modules Agents, Dossiers, Rapports,
-              Recherches et Divisions seront branchés progressivement sur cette structure.
-            </p>
-          </article>
-
-          <article class="mdt-card mdt-service-card">
-            <div class="mdt-service-logo">
-              <?php if ($activeServiceLogo): ?>
-                <img src="<?= htmlspecialchars($activeServiceLogo, ENT_QUOTES, 'UTF-8') ?>" alt="<?= htmlspecialchars($activeServiceCode, ENT_QUOTES, 'UTF-8') ?>" />
-              <?php else: ?>
-                <?= htmlspecialchars($activeServiceCode, ENT_QUOTES, 'UTF-8') ?>
-              <?php endif; ?>
-            </div>
+        <section class="mdt-card mdt-motd-card">
+          <div class="mdt-motd-header">
             <div>
-              <p class="mdt-kicker">Service</p>
-              <h3><?= htmlspecialchars($activeServiceName, ENT_QUOTES, 'UTF-8') ?></h3>
+              <p class="mdt-kicker">Annonce service</p>
+              <h2><?= htmlspecialchars((string) ($serviceInfo['motd_title'] ?? 'Annonce opérationnelle'), ENT_QUOTES, 'UTF-8') ?></h2>
             </div>
-          </article>
+            <span class="mdt-timecode"><?= htmlspecialchars($updatedLabel, ENT_QUOTES, 'UTF-8') ?></span>
+          </div>
+
+          <p class="mdt-motd-body"><?= nl2br(htmlspecialchars((string) ($serviceInfo['motd_body'] ?? 'Aucune annonce active.'), ENT_QUOTES, 'UTF-8')) ?></p>
+
+          <?php if ($canUpdateMotd): ?>
+            <button type="button" id="motdEditButton" class="mdt-button-secondary">Modifier l’annonce</button>
+            <form id="motdForm" class="mdt-motd-form" hidden>
+              <div class="field-group">
+                <label for="motdTitle">Titre</label>
+                <input type="text" id="motdTitle" name="title" maxlength="160" value="<?= htmlspecialchars((string) ($serviceInfo['motd_title'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required />
+              </div>
+              <div class="field-group">
+                <label for="motdBody">Annonce</label>
+                <textarea id="motdBody" name="body" maxlength="1200" required><?= htmlspecialchars((string) ($serviceInfo['motd_body'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
+              </div>
+              <p id="motdMessage" class="form-message"></p>
+              <div class="mdt-form-actions">
+                <button type="submit" class="mdt-button">Sauvegarder</button>
+                <button type="button" id="motdCancelButton" class="mdt-button-secondary">Annuler</button>
+              </div>
+            </form>
+          <?php endif; ?>
         </section>
 
-        <section class="mdt-grid" aria-label="Statistiques MDT">
-          <article class="mdt-card mdt-stat">
-            <span>Comptes MDT</span>
-            <strong><?= $totalUsers ?></strong>
-            <p>Total utilisateurs.</p>
-          </article>
-          <article class="mdt-card mdt-stat">
-            <span>Comptes actifs</span>
-            <strong><?= $activeUsers ?></strong>
-            <p>Peuvent se connecter.</p>
-          </article>
-          <article class="mdt-card mdt-stat">
-            <span>En attente</span>
-            <strong><?= $pendingUsers ?></strong>
-            <p>À valider ou désactivés.</p>
-          </article>
-          <article class="mdt-card mdt-stat">
-            <span><?= htmlspecialchars($activeServiceCode, ENT_QUOTES, 'UTF-8') ?> membres</span>
-            <strong><?= $serviceUsers ?></strong>
-            <p>Affectés au service actif.</p>
-          </article>
-        </section>
-
-        <section class="mdt-section-grid">
+        <section class="mdt-section-grid compact-dashboard">
           <article class="mdt-card mdt-panel">
             <h3>Profil opérationnel</h3>
-            <div class="mdt-list-line"><span>Username</span><strong><?= htmlspecialchars($user['username'], ENT_QUOTES, 'UTF-8') ?></strong></div>
+            <div class="mdt-list-line"><span>Agent</span><strong><?= htmlspecialchars($user['username'], ENT_QUOTES, 'UTF-8') ?></strong></div>
             <div class="mdt-list-line"><span>Service actif</span><strong><?= htmlspecialchars($activeServiceCode, ENT_QUOTES, 'UTF-8') ?></strong></div>
-            <div class="mdt-list-line"><span>Grade RP</span><strong><?= htmlspecialchars($activeRankName, ENT_QUOTES, 'UTF-8') ?></strong></div>
-            <div class="mdt-list-line"><span>Rôle MDT</span><strong><?= htmlspecialchars((string) ($user['role'] ?? 'user'), ENT_QUOTES, 'UTF-8') ?></strong></div>
+            <div class="mdt-list-line"><span>Grade</span><strong><?= htmlspecialchars($activeRankName, ENT_QUOTES, 'UTF-8') ?></strong></div>
           </article>
 
           <article class="mdt-card mdt-panel">
             <h3>Modules service</h3>
             <div class="mdt-module-grid">
-              <div class="mdt-module-tile"><strong>Agents</strong>Gestion des membres du service.</div>
+              <div class="mdt-module-tile"><strong>Recherches</strong>Recherche de personnes, dossiers et informations.</div>
               <div class="mdt-module-tile"><strong>Dossiers</strong>Fiches, enquêtes et suivis.</div>
               <div class="mdt-module-tile"><strong>Rapports</strong>Compte-rendus opérationnels.</div>
               <div class="mdt-module-tile"><strong>Divisions</strong>Unités internes et accès dédiés.</div>
@@ -184,5 +185,6 @@ try {
       window.location.href = result.redirect || '/index.html';
     });
   </script>
+  <script src="/motd.js?v=1"></script>
 </body>
 </html>

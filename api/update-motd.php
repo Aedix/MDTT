@@ -3,7 +3,6 @@
 declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/permissions.php';
 require_once __DIR__ . '/../includes/db.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -14,7 +13,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-$user = requirePermission('service.motd.update');
+$user = requireAuthenticatedUser();
 $data = json_decode(file_get_contents('php://input') ?: '', true);
 
 if (!is_array($data)) {
@@ -39,9 +38,9 @@ if ($title === '' || mb_strlen($title) > 120) {
     exit;
 }
 
-if ($body === '' || mb_strlen($body) > 1200) {
+if ($body === '' || mb_strlen($body) > 2000) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Annonce invalide. Maximum 1200 caracteres.']);
+    echo json_encode(['success' => false, 'message' => 'Annonce invalide. Maximum 2000 caracteres.']);
     exit;
 }
 

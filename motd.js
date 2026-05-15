@@ -1,11 +1,16 @@
 const motdEditButton = document.querySelector('#motdEditButton');
-const motdForm = document.querySelector('#motdForm');
+const motdSaveButton = document.querySelector('#motdSaveButton');
 const motdCancelButton = document.querySelector('#motdCancelButton');
 const motdMessage = document.querySelector('#motdMessage');
 const motdView = document.querySelector('#motdView');
 const motdTitleView = document.querySelector('#motdTitleView');
+const motdTitle = document.querySelector('#motdTitle');
 const motdBody = document.querySelector('#motdBody');
+const motdEditor = document.querySelector('#motdEditor');
 const toolbarButtons = document.querySelectorAll('.mdt-editor-toolbar button');
+
+const originalTitle = motdTitle?.value || '';
+const originalBody = motdBody?.value || '';
 
 function setMotdMessage(message, type = 'error') {
   if (!motdMessage) return;
@@ -60,22 +65,36 @@ function promptAndInsert(type) {
   }
 }
 
+function openMotdEditor() {
+  if (motdView) motdView.hidden = true;
+  if (motdTitleView) motdTitleView.hidden = true;
+  if (motdTitle) motdTitle.hidden = false;
+  if (motdEditor) motdEditor.hidden = false;
+  if (motdEditButton) motdEditButton.hidden = true;
+  if (motdSaveButton) motdSaveButton.hidden = false;
+  if (motdCancelButton) motdCancelButton.hidden = false;
+  setMotdMessage('');
+  motdBody?.focus();
+}
+
 function closeMotdEditor() {
-  if (motdForm) motdForm.hidden = true;
   if (motdView) motdView.hidden = false;
+  if (motdTitleView) motdTitleView.hidden = false;
+  if (motdTitle) motdTitle.hidden = true;
+  if (motdEditor) motdEditor.hidden = true;
   if (motdEditButton) motdEditButton.hidden = false;
+  if (motdSaveButton) motdSaveButton.hidden = true;
+  if (motdCancelButton) motdCancelButton.hidden = true;
 }
 
-if (motdEditButton && motdForm && motdView) {
-  motdEditButton.addEventListener('click', () => {
-    motdForm.hidden = false;
-    motdView.hidden = true;
-    motdEditButton.hidden = true;
-  });
+if (motdEditButton) {
+  motdEditButton.addEventListener('click', openMotdEditor);
 }
 
-if (motdCancelButton && motdForm && motdEditButton && motdView) {
+if (motdCancelButton) {
   motdCancelButton.addEventListener('click', () => {
+    if (motdTitle) motdTitle.value = originalTitle;
+    if (motdBody) motdBody.value = originalBody;
     closeMotdEditor();
     setMotdMessage('');
   });
@@ -98,14 +117,13 @@ toolbarButtons.forEach((button) => {
   });
 });
 
-if (motdForm) {
-  motdForm.addEventListener('submit', async (event) => {
-    event.preventDefault();
-
-    const title = motdForm.title.value.trim();
-    const body = motdForm.body.value.trim();
+if (motdSaveButton) {
+  motdSaveButton.addEventListener('click', async () => {
+    const title = motdTitle?.value.trim() || '';
+    const body = motdBody?.value.trim() || '';
 
     setMotdMessage('Mise à jour de l’annonce...', 'info');
+    motdSaveButton.disabled = true;
 
     try {
       const response = await fetch('/api/update-motd.php', {
@@ -119,6 +137,7 @@ if (motdForm) {
 
       if (!response.ok || !result.success) {
         setMotdMessage(result.message || 'Mise à jour refusée.');
+        motdSaveButton.disabled = false;
         return;
       }
 
@@ -129,9 +148,10 @@ if (motdForm) {
         motdTitleView.textContent = title;
       }
 
-      window.setTimeout(() => window.location.reload(), 350);
+      window.setTimeout(() => window.location.reload(), 250);
     } catch (error) {
       setMotdMessage('Erreur serveur ou réponse invalide.');
+      motdSaveButton.disabled = false;
     }
   });
 }

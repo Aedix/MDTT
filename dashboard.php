@@ -24,9 +24,10 @@ $serviceInfo = [
 
 try {
     $serviceStatement = $pdo->prepare(
-        'SELECT logo_path, motd_title, motd_body, motd_updated_at
-         FROM services
-         WHERE code = :code
+        'SELECT s.id, s.logo_path, sm.title AS motd_title, sm.body AS motd_body, sm.updated_at AS motd_updated_at
+         FROM services s
+         LEFT JOIN service_motd sm ON sm.service_id = s.id
+         WHERE s.code = :code
          LIMIT 1'
     );
     $serviceStatement->execute(['code' => $activeServiceCode]);
@@ -34,7 +35,7 @@ try {
 
     if ($serviceRow) {
         $activeServiceLogo = (string) ($serviceRow['logo_path'] ?? $activeServiceLogo);
-        $serviceInfo = array_merge($serviceInfo, $serviceRow);
+        $serviceInfo = array_merge($serviceInfo, array_filter($serviceRow, static fn ($value) => $value !== null));
     }
 } catch (Throwable $exception) {
     // Migration MOTD not installed yet.
@@ -135,7 +136,7 @@ if (!empty($serviceInfo['motd_updated_at'])) {
             <form id="motdForm" class="mdt-motd-form" hidden>
               <div class="field-group">
                 <label for="motdTitle">Titre</label>
-                <input type="text" id="motdTitle" name="title" maxlength="160" value="<?= htmlspecialchars((string) ($serviceInfo['motd_title'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required />
+                <input type="text" id="motdTitle" name="title" maxlength="120" value="<?= htmlspecialchars((string) ($serviceInfo['motd_title'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required />
               </div>
               <div class="field-group">
                 <label for="motdBody">Annonce</label>

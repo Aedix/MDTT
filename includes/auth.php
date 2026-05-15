@@ -33,7 +33,29 @@ function setAuthenticatedUser(array $user): void
         'service' => $user['service'] ?? null,
         'rank_name' => $user['rank_name'] ?? null,
         'role' => $user['role'] ?? 'user',
+        'active_service_id' => $user['active_service_id'] ?? null,
+        'active_service_code' => $user['active_service_code'] ?? ($user['service'] ?? null),
+        'active_service_name' => $user['active_service_name'] ?? null,
+        'active_service_logo' => $user['active_service_logo'] ?? null,
+        'active_rank_name' => $user['active_rank_name'] ?? ($user['rank_name'] ?? null),
     ];
+}
+
+function updateActiveServiceSession(array $service): void
+{
+    startSecureSession();
+
+    if (!isset($_SESSION['user'])) {
+        return;
+    }
+
+    $_SESSION['user']['active_service_id'] = (int) $service['service_id'];
+    $_SESSION['user']['active_service_code'] = $service['service_code'];
+    $_SESSION['user']['active_service_name'] = $service['service_name'];
+    $_SESSION['user']['active_service_logo'] = $service['logo_path'] ?? null;
+    $_SESSION['user']['active_rank_name'] = $service['rank_name'] ?? null;
+    $_SESSION['user']['service'] = $service['service_code'];
+    $_SESSION['user']['rank_name'] = $service['rank_name'] ?? null;
 }
 
 function getAuthenticatedUser(): ?array

@@ -7,7 +7,6 @@ CREATE TABLE IF NOT EXISTS divisions (
   service_id INT NOT NULL,
   code VARCHAR(80) NOT NULL,
   name VARCHAR(120) NOT NULL,
-  icon VARCHAR(20) NULL,
   sort_order INT NOT NULL DEFAULT 1,
   is_active TINYINT(1) NOT NULL DEFAULT 1,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -70,26 +69,26 @@ INSERT INTO ranks (service_id, code, name, level, sort_order, is_command, is_act
 SELECT s.id, 'director', 'Director', 100, 100, 1, 1 FROM services s WHERE s.code = 'FIB'
 ON DUPLICATE KEY UPDATE name = VALUES(name), level = VALUES(level), sort_order = VALUES(sort_order), is_command = VALUES(is_command), is_active = VALUES(is_active);
 
-INSERT INTO divisions (service_id, code, name, icon, sort_order, is_active)
-SELECT s.id, 'hostage_rescue', 'Hostage Rescue', '💥', 10, 1 FROM services s WHERE s.code = 'FIB'
-ON DUPLICATE KEY UPDATE name = VALUES(name), icon = VALUES(icon), sort_order = VALUES(sort_order), is_active = VALUES(is_active);
+INSERT INTO divisions (service_id, code, name, sort_order, is_active)
+SELECT s.id, 'hostage_rescue', 'Hostage Rescue', 10, 1 FROM services s WHERE s.code = 'FIB'
+ON DUPLICATE KEY UPDATE name = VALUES(name), sort_order = VALUES(sort_order), is_active = VALUES(is_active);
 
-INSERT INTO divisions (service_id, code, name, icon, sort_order, is_active)
-SELECT s.id, 'crime_investigation', 'Crime Investigation', '👮', 20, 1 FROM services s WHERE s.code = 'FIB'
-ON DUPLICATE KEY UPDATE name = VALUES(name), icon = VALUES(icon), sort_order = VALUES(sort_order), is_active = VALUES(is_active);
+INSERT INTO divisions (service_id, code, name, sort_order, is_active)
+SELECT s.id, 'crime_investigation', 'Crime Investigation', 20, 1 FROM services s WHERE s.code = 'FIB'
+ON DUPLICATE KEY UPDATE name = VALUES(name), sort_order = VALUES(sort_order), is_active = VALUES(is_active);
 
-INSERT INTO divisions (service_id, code, name, icon, sort_order, is_active)
-SELECT s.id, 'financial_crime', 'Financial Crime', '💳', 30, 1 FROM services s WHERE s.code = 'FIB'
-ON DUPLICATE KEY UPDATE name = VALUES(name), icon = VALUES(icon), sort_order = VALUES(sort_order), is_active = VALUES(is_active);
+INSERT INTO divisions (service_id, code, name, sort_order, is_active)
+SELECT s.id, 'financial_crime', 'Financial Crime', 30, 1 FROM services s WHERE s.code = 'FIB'
+ON DUPLICATE KEY UPDATE name = VALUES(name), sort_order = VALUES(sort_order), is_active = VALUES(is_active);
 
-INSERT INTO divisions (service_id, code, name, icon, sort_order, is_active)
-SELECT s.id, 'digital_forensics', 'Digital Forensics', '🌐', 40, 1 FROM services s WHERE s.code = 'FIB'
-ON DUPLICATE KEY UPDATE name = VALUES(name), icon = VALUES(icon), sort_order = VALUES(sort_order), is_active = VALUES(is_active);
+INSERT INTO divisions (service_id, code, name, sort_order, is_active)
+SELECT s.id, 'digital_forensics', 'Digital Forensics', 40, 1 FROM services s WHERE s.code = 'FIB'
+ON DUPLICATE KEY UPDATE name = VALUES(name), sort_order = VALUES(sort_order), is_active = VALUES(is_active);
 
-INSERT INTO divisions (service_id, code, name, icon, sort_order, is_active)
-SELECT s.id, 'media_relation', 'Media Relation', '📢', 50, 1 FROM services s WHERE s.code = 'FIB'
-ON DUPLICATE KEY UPDATE name = VALUES(name), icon = VALUES(icon), sort_order = VALUES(sort_order), is_active = VALUES(is_active);
+INSERT INTO divisions (service_id, code, name, sort_order, is_active)
+SELECT s.id, 'media_relation', 'Media Relation', 50, 1 FROM services s WHERE s.code = 'FIB'
+ON DUPLICATE KEY UPDATE name = VALUES(name), sort_order = VALUES(sort_order), is_active = VALUES(is_active);
 
-INSERT INTO divisions (service_id, code, name, icon, sort_order, is_active)
-SELECT s.id, 'recruit_team', 'Recruit Team', '📝', 60, 1 FROM services s WHERE s.code = 'FIB'
-ON DUPLICATE KEY UPDATE name = VALUES(name), icon = VALUES(icon), sort_order = VALUES(sort_order), is_active = VALUES(is_active);
+INSERT INTO divisions (service_id, code, name, sort_order, is_active)
+SELECT s.id, 'recruit_team', 'Recruit Team', 60, 1 FROM services s WHERE s.code = 'FIB'
+ON DUPLICATE KEY UPDATE name = VALUES(name), sort_order = VALUES(sort_order), is_active = VALUES(is_active);

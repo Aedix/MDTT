@@ -51,7 +51,6 @@ const FALLBACK_ROLE_PERMISSIONS = [
         'ranks.move',
         'ranks.delete',
         'roles.view',
-        'roles.assign',
         'permissions.view',
     ],
     'super_admin' => ['*'],
@@ -181,4 +180,9 @@ function canOpenManagementPanel(array $user): bool
 function isSystemAdminUser(array $user): bool
 {
     return userHasPermission($user, 'accounts.reset_password');
+}
+
+function canAssignTechnicalRoles(array $user): bool
+{
+    return userHasPermission($user, 'roles.assign');
 }

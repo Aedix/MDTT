@@ -119,7 +119,7 @@ if ($activeShift) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MDT - <?= htmlspecialchars($activeServiceCode, ENT_QUOTES, 'UTF-8') ?></title>
   <link rel="stylesheet" href="/style.css?v=11" />
-  <link rel="stylesheet" href="/mdt.css?v=4" />
+  <link rel="stylesheet" href="/mdt.css?v=5" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">
   <div class="mdt-shell">
@@ -178,24 +178,22 @@ if ($activeShift) {
       <main class="mdt-content">
         <section class="mdt-card mdt-motd-card">
           <div class="mdt-motd-header">
-            <div>
+            <div class="mdt-motd-title-block">
               <p class="mdt-kicker">Annonce service</p>
               <h2 id="motdTitleView"><?= htmlspecialchars((string) ($serviceInfo['motd_title'] ?? 'Annonce opérationnelle'), ENT_QUOTES, 'UTF-8') ?></h2>
+              <input type="text" id="motdTitle" name="title" class="mdt-motd-title-input" maxlength="120" value="<?= htmlspecialchars((string) ($serviceInfo['motd_title'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" hidden required />
             </div>
             <div class="mdt-motd-actions">
               <span class="mdt-timecode"><?= htmlspecialchars($updatedLabel, ENT_QUOTES, 'UTF-8') ?></span>
               <button type="button" id="motdEditButton" class="mdt-icon-button" title="Modifier l’annonce" aria-label="Modifier l’annonce">✎</button>
+              <button type="button" id="motdSaveButton" class="mdt-button" hidden>Sauvegarder</button>
+              <button type="button" id="motdCancelButton" class="mdt-button-secondary" hidden>Annuler</button>
             </div>
           </div>
 
           <div id="motdView" class="mdt-motd-body bbcode-content"><?= renderBbCode((string) ($serviceInfo['motd_body'] ?? 'Aucune annonce active.')) ?></div>
 
-          <form id="motdForm" class="mdt-motd-inline-editor" hidden>
-            <div class="field-group">
-              <label for="motdTitle">Titre</label>
-              <input type="text" id="motdTitle" name="title" maxlength="120" value="<?= htmlspecialchars((string) ($serviceInfo['motd_title'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" required />
-            </div>
-
+          <div id="motdEditor" class="mdt-motd-editor-surface" hidden>
             <div class="mdt-editor-toolbar" aria-label="Outils de mise en forme BBCode">
               <button type="button" data-wrap="[b]|[/b]"><strong>B</strong></button>
               <button type="button" data-wrap="[i]|[/i]"><em>I</em></button>
@@ -211,12 +209,8 @@ if ($activeShift) {
             </div>
 
             <textarea id="motdBody" name="body" maxlength="2000" required><?= htmlspecialchars((string) ($serviceInfo['motd_body'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
-            <p id="motdMessage" class="form-message"></p>
-            <div class="mdt-form-actions">
-              <button type="submit" class="mdt-button">Sauvegarder</button>
-              <button type="button" id="motdCancelButton" class="mdt-button-secondary">Annuler</button>
-            </div>
-          </form>
+          </div>
+          <p id="motdMessage" class="form-message"></p>
         </section>
 
         <section class="mdt-dashboard-grid">
@@ -312,7 +306,7 @@ if ($activeShift) {
       window.location.href = result.redirect || '/index.html';
     });
   </script>
-  <script src="/motd.js?v=2"></script>
+  <script src="/motd.js?v=3"></script>
   <script src="/shift.js?v=1"></script>
 </body>
 </html>

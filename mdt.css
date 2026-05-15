@@ -13,6 +13,10 @@
   --mdt-danger: #ff6b6b;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 body.mdt-body {
   min-height: 100vh;
   color: var(--mdt-text);
@@ -274,6 +278,13 @@ textarea:focus {
   font-size: 2rem;
 }
 
+.mdt-motd-title-input {
+  width: min(760px, 100%);
+  margin-top: 2px;
+  font-size: 1.55rem;
+  font-weight: 900;
+}
+
 .mdt-icon-button {
   width: 38px;
   height: 38px;
@@ -371,10 +382,15 @@ textarea:focus {
   font-size: 0.82rem;
 }
 
-.mdt-motd-inline-editor {
+.mdt-motd-inline-editor,
+.mdt-motd-editor-surface:not([hidden]) {
   display: grid;
   gap: 12px;
   margin-top: 14px;
+}
+
+.mdt-motd-editor-surface textarea {
+  min-height: 150px;
 }
 
 .mdt-editor-toolbar {

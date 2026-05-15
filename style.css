@@ -141,6 +141,7 @@ select:focus {
 .primary-button,
 .secondary-actions button,
 .neutral-secondary-button {
+  min-height: 46px;
   cursor: pointer;
   border: none;
   border-radius: 10px;
@@ -172,7 +173,8 @@ select:focus {
 
 .secondary-actions button,
 .neutral-secondary-button {
-  padding: 11px;
+  width: 100%;
+  padding: 14px 16px;
   color: var(--muted);
   background: rgba(255, 255, 255, 0.06);
 }
@@ -198,6 +200,59 @@ select:focus {
 
 .dashboard-info strong {
   color: var(--text);
+}
+
+.assigned-services-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 12px 0 16px;
+}
+
+.assigned-service-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(127, 179, 255, 0.28);
+  border-radius: 999px;
+  color: var(--text);
+  background: rgba(47, 128, 237, 0.12);
+  font-size: 0.85rem;
+}
+
+.service-remove-button {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  color: white;
+  background: rgba(255, 107, 107, 0.8);
+  cursor: pointer;
+  line-height: 1;
+}
+
+.account-service-manager {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+  padding: 14px;
+  border: 1px solid rgba(154, 168, 189, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.inline-check {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 26px;
+  color: var(--muted);
+}
+
+.inline-check input {
+  width: auto;
 }
 
 .service-select-page {

@@ -21,13 +21,20 @@ $serviceInfo = [
     'motd_title' => 'Annonce opérationnelle',
     'motd_body' => 'Aucune annonce active pour le moment.',
     'motd_updated_at' => null,
+    'motd_updated_by' => null,
 ];
 
 try {
     $serviceStatement = $pdo->prepare(
-        'SELECT s.id AS service_id, s.logo_path, sm.title AS motd_title, sm.body AS motd_body, sm.updated_at AS motd_updated_at
+        'SELECT s.id AS service_id,
+                s.logo_path,
+                sm.title AS motd_title,
+                sm.body AS motd_body,
+                sm.updated_at AS motd_updated_at,
+                u.username AS motd_updated_by
          FROM services s
          LEFT JOIN service_motd sm ON sm.service_id = s.id
+         LEFT JOIN users u ON u.id = sm.updated_by
          WHERE s.code = :code
          LIMIT 1'
     );
@@ -57,11 +64,17 @@ if (!empty($serviceInfo['motd_updated_at'])) {
     } else {
         $updatedLabel = 'Mis à jour il y a ' . floor($diffSeconds / 86400) . ' j';
     }
+
+    if (!empty($serviceInfo['motd_updated_by'])) {
+        $updatedLabel .= ' par ' . $serviceInfo['motd_updated_by'];
+    }
 }
 
 $activeShift = null;
 $onDutyAgents = [];
 $divisions = [];
+$dispatchUnits = [];
+$unitMembers = [];
 
 try {
     $shiftStatement = $pdo->prepare(
@@ -80,29 +93,57 @@ try {
     $activeShift = $shiftStatement->fetch() ?: null;
 
     $agentsStatement = $pdo->prepare(
-        'SELECT u.username, u.rank_name, ss.started_at
+        'SELECT u.id, u.username, u.rank_name, ss.started_at
          FROM service_shifts ss
          INNER JOIN users u ON u.id = ss.user_id
          WHERE ss.service_id = :service_id
            AND ss.ended_at IS NULL
-         ORDER BY ss.started_at ASC'
+         ORDER BY u.username ASC'
     );
     $agentsStatement->execute(['service_id' => (int) ($serviceInfo['service_id'] ?? 0)]);
     $onDutyAgents = $agentsStatement->fetchAll();
 
     $divisionsStatement = $pdo->prepare(
-        'SELECT name
+        'SELECT id, name
          FROM divisions
          WHERE service_id = :service_id
            AND is_active = 1
          ORDER BY sort_order ASC, name ASC'
     );
     $divisionsStatement->execute(['service_id' => (int) ($serviceInfo['service_id'] ?? 0)]);
-    $divisions = $divisionsStatement->fetchAll(PDO::FETCH_COLUMN);
+    $divisions = $divisionsStatement->fetchAll();
+
+    $unitsStatement = $pdo->prepare(
+        'SELECT du.id, du.name, du.status, du.ppa_level, du.division_id, d.name AS division_name
+         FROM dispatch_units du
+         LEFT JOIN divisions d ON d.id = du.division_id
+         WHERE du.service_id = :service_id
+           AND du.is_active = 1
+         ORDER BY du.created_at ASC'
+    );
+    $unitsStatement->execute(['service_id' => (int) ($serviceInfo['service_id'] ?? 0)]);
+    $dispatchUnits = $unitsStatement->fetchAll();
+
+    $membersStatement = $pdo->prepare(
+        'SELECT dum.unit_id, u.id AS user_id, u.username
+         FROM dispatch_unit_members dum
+         INNER JOIN users u ON u.id = dum.user_id
+         INNER JOIN dispatch_units du ON du.id = dum.unit_id
+         WHERE du.service_id = :service_id
+           AND du.is_active = 1
+           AND dum.is_active = 1
+         ORDER BY u.username ASC'
+    );
+    $membersStatement->execute(['service_id' => (int) ($serviceInfo['service_id'] ?? 0)]);
+    foreach ($membersStatement->fetchAll() as $memberRow) {
+        $unitMembers[(int) $memberRow['unit_id']][] = $memberRow;
+    }
 } catch (Throwable $exception) {
     $activeShift = null;
     $onDutyAgents = [];
     $divisions = [];
+    $dispatchUnits = [];
+    $unitMembers = [];
 }
 
 $shiftLabel = 'Hors service';
@@ -119,7 +160,7 @@ if ($activeShift) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MDT - <?= htmlspecialchars($activeServiceCode, ENT_QUOTES, 'UTF-8') ?></title>
   <link rel="stylesheet" href="/style.css?v=11" />
-  <link rel="stylesheet" href="/mdt.css?v=5" />
+  <link rel="stylesheet" href="/mdt.css?v=6" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">
   <div class="mdt-shell">
@@ -220,8 +261,46 @@ if ($activeShift) {
                 <p class="mdt-kicker">Dispatch</p>
                 <h3>Unités actives</h3>
               </div>
-              <button type="button" class="mdt-button-secondary" disabled>Créer unité</button>
+              <button type="button" id="createUnitButton" class="mdt-button-secondary">Créer unité</button>
             </div>
+
+            <p id="dispatchMessage" class="form-message"></p>
+
+            <form id="createUnitForm" class="dispatch-create-form" hidden>
+              <div class="dispatch-form-grid">
+                <input type="text" name="name" value="<?= htmlspecialchars($activeServiceCode . '-01', ENT_QUOTES, 'UTF-8') ?>" aria-label="Nom unité" required />
+                <input type="text" name="status" value="Disponible" aria-label="Statut unité" required />
+                <select name="division_id" aria-label="Division">
+                  <option value="0">Aucune division</option>
+                  <?php foreach ($divisions as $division): ?>
+                    <option value="<?= (int) $division['id'] ?>"><?= htmlspecialchars((string) $division['name'], ENT_QUOTES, 'UTF-8') ?></option>
+                  <?php endforeach; ?>
+                </select>
+                <select name="ppa_level" aria-label="PPA">
+                  <option>PPA I</option>
+                  <option>PPA II</option>
+                  <option>PPA III</option>
+                  <option>PPA IV</option>
+                </select>
+              </div>
+
+              <div class="dispatch-members-picker">
+                <?php if (empty($onDutyAgents)): ?>
+                  <p class="mdt-muted-line">Aucun agent en service : impossible de créer une unité.</p>
+                <?php endif; ?>
+                <?php foreach ($onDutyAgents as $agent): ?>
+                  <label>
+                    <input type="checkbox" class="dispatch-member-checkbox" value="<?= (int) $agent['id'] ?>" <?= ((int) $agent['id'] === (int) $user['id']) ? 'checked' : '' ?> />
+                    <?= htmlspecialchars((string) $agent['username'], ENT_QUOTES, 'UTF-8') ?>
+                  </label>
+                <?php endforeach; ?>
+              </div>
+
+              <div class="mdt-form-actions">
+                <button type="submit" class="mdt-button">Créer</button>
+                <button type="button" id="cancelCreateUnitButton" class="mdt-button-secondary">Annuler</button>
+              </div>
+            </form>
 
             <div class="mdt-dispatch-table">
               <div class="mdt-dispatch-row header">
@@ -230,27 +309,44 @@ if ($activeShift) {
                 <span>Division</span>
                 <span>PPA</span>
                 <span>Agents</span>
+                <span>Actions</span>
               </div>
-              <div class="mdt-dispatch-empty">
-                Aucune unité dispatch active. Le module complet sera branché après la prise de service.
-              </div>
-            </div>
 
-            <div class="mdt-dispatch-draft">
-              <input type="text" value="FIB-01" aria-label="Nom unité" disabled />
-              <input type="text" value="Disponible" aria-label="Statut unité" disabled />
-              <select disabled>
-                <option>Division active</option>
-                <?php foreach ($divisions as $division): ?>
-                  <option><?= htmlspecialchars((string) $division, ENT_QUOTES, 'UTF-8') ?></option>
-                <?php endforeach; ?>
-              </select>
-              <select disabled>
-                <option>PPA I</option>
-                <option>PPA II</option>
-                <option>PPA III</option>
-                <option>PPA IV</option>
-              </select>
+              <?php if (empty($dispatchUnits)): ?>
+                <div class="mdt-dispatch-empty">Aucune unité dispatch active.</div>
+              <?php endif; ?>
+
+              <?php foreach ($dispatchUnits as $unit): ?>
+                <?php $currentMembers = $unitMembers[(int) $unit['id']] ?? []; ?>
+                <form class="dispatch-update-form mdt-dispatch-row unit" data-unit-id="<?= (int) $unit['id'] ?>">
+                  <input type="text" name="name" value="<?= htmlspecialchars((string) $unit['name'], ENT_QUOTES, 'UTF-8') ?>" aria-label="Nom unité" />
+                  <input type="text" name="status" value="<?= htmlspecialchars((string) $unit['status'], ENT_QUOTES, 'UTF-8') ?>" aria-label="Statut unité" />
+                  <select name="division_id" aria-label="Division">
+                    <option value="0">Aucune division</option>
+                    <?php foreach ($divisions as $division): ?>
+                      <option value="<?= (int) $division['id'] ?>" <?= ((int) ($unit['division_id'] ?? 0) === (int) $division['id']) ? 'selected' : '' ?>><?= htmlspecialchars((string) $division['name'], ENT_QUOTES, 'UTF-8') ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                  <select name="ppa_level" aria-label="PPA">
+                    <?php foreach (['PPA I', 'PPA II', 'PPA III', 'PPA IV'] as $ppa): ?>
+                      <option <?= ((string) $unit['ppa_level'] === $ppa) ? 'selected' : '' ?>><?= $ppa ?></option>
+                    <?php endforeach; ?>
+                  </select>
+                  <div class="dispatch-members-picker compact">
+                    <?php foreach ($onDutyAgents as $agent): ?>
+                      <?php $isMember = in_array((int) $agent['id'], array_map(static fn ($m) => (int) $m['user_id'], $currentMembers), true); ?>
+                      <label>
+                        <input type="checkbox" class="dispatch-member-checkbox" value="<?= (int) $agent['id'] ?>" <?= $isMember ? 'checked' : '' ?> />
+                        <?= htmlspecialchars((string) $agent['username'], ENT_QUOTES, 'UTF-8') ?>
+                      </label>
+                    <?php endforeach; ?>
+                  </div>
+                  <div class="dispatch-row-actions">
+                    <button type="submit" class="mdt-button-secondary">Sauver</button>
+                    <button type="button" class="mdt-button-danger dispatch-close-button" data-unit-id="<?= (int) $unit['id'] ?>">Fermer</button>
+                  </div>
+                </form>
+              <?php endforeach; ?>
             </div>
           </article>
 
@@ -308,5 +404,6 @@ if ($activeShift) {
   </script>
   <script src="/motd.js?v=3"></script>
   <script src="/shift.js?v=1"></script>
+  <script src="/dispatch.js?v=1"></script>
 </body>
 </html>

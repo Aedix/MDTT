@@ -27,6 +27,7 @@ const FALLBACK_ROLE_PERMISSIONS = [
         'accounts.activate',
         'accounts.deactivate',
         'accounts.change_rank',
+        'service.motd.update',
     ],
     'lieutenant' => [
         'mdt.access',
@@ -35,6 +36,7 @@ const FALLBACK_ROLE_PERMISSIONS = [
         'accounts.activate',
         'accounts.deactivate',
         'accounts.change_rank',
+        'service.motd.update',
     ],
     'chief' => [
         'mdt.access',
@@ -50,6 +52,7 @@ const FALLBACK_ROLE_PERMISSIONS = [
         'ranks.rename',
         'ranks.move',
         'ranks.delete',
+        'service.motd.update',
     ],
     'admin' => [
         'mdt.access',
@@ -67,6 +70,7 @@ const FALLBACK_ROLE_PERMISSIONS = [
         'ranks.delete',
         'roles.view',
         'permissions.view',
+        'service.motd.update',
     ],
     'super_admin' => ['*'],
 ];

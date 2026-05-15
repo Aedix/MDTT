@@ -33,9 +33,9 @@ if ($serviceCode === '') {
     exit;
 }
 
-if ($title === '' || mb_strlen($title) > 160) {
+if ($title === '' || mb_strlen($title) > 120) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Titre invalide. Maximum 160 caracteres.']);
+    echo json_encode(['success' => false, 'message' => 'Titre invalide. Maximum 120 caracteres.']);
     exit;
 }
 
@@ -46,20 +46,31 @@ if ($body === '' || mb_strlen($body) > 1200) {
 }
 
 $pdo = getDatabaseConnection();
+
+$serviceStatement = $pdo->prepare('SELECT id FROM services WHERE code = :code AND is_active = 1 LIMIT 1');
+$serviceStatement->execute(['code' => $serviceCode]);
+$service = $serviceStatement->fetch();
+
+if (!$service) {
+    http_response_code(404);
+    echo json_encode(['success' => false, 'message' => 'Service introuvable.']);
+    exit;
+}
+
 $statement = $pdo->prepare(
-    'UPDATE services
-     SET motd_title = :title,
-         motd_body = :body,
-         motd_updated_at = NOW(),
-         motd_updated_by = :user_id
-     WHERE code = :service_code
-       AND is_active = 1'
+    'INSERT INTO service_motd (service_id, title, body, updated_by)
+     VALUES (:service_id, :title, :body, :updated_by)
+     ON DUPLICATE KEY UPDATE
+       title = VALUES(title),
+       body = VALUES(body),
+       updated_by = VALUES(updated_by),
+       updated_at = CURRENT_TIMESTAMP'
 );
 $statement->execute([
+    'service_id' => (int) $service['id'],
     'title' => $title,
     'body' => $body,
-    'user_id' => (int) $user['id'],
-    'service_code' => $serviceCode,
+    'updated_by' => (int) $user['id'],
 ]);
 
 echo json_encode(['success' => true, 'message' => 'Annonce mise a jour.']);

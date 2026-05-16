@@ -9,12 +9,32 @@
     .motd-color-input.is-hidden,
     .motd-font-select.is-hidden,
     .motd-apply-style-button.is-hidden { display: none !important; }
-    .motd-style-group { display: inline-flex; align-items: stretch; gap: 0; border: 1px solid rgba(154,168,189,.22); border-radius: 10px; overflow: hidden; background: rgba(255,255,255,.065); }
-    .motd-style-group input[type="color"] { width: 38px; min-height: 34px; padding: 2px; border: 0; border-radius: 0; background: transparent; cursor: pointer; }
-    .motd-style-group button { min-height: 34px; padding: 0 10px; border: 0; border-left: 1px solid rgba(154,168,189,.18); color: #fff; background: rgba(47,128,237,.22); font-weight: 900; cursor: pointer; }
-    .motd-style-group button:hover { background: rgba(47,128,237,.38); }
-    .motd-font-library { min-height: 34px; min-width: 190px; max-width: 230px; padding: 7px 8px; border: 1px solid rgba(154,168,189,.22); border-radius: 10px; color: var(--mdt-text); background: rgba(255,255,255,.065); font-weight: 800; }
     .motd-file-input { display: none; }
+
+    .motd-style-picker { position: relative; display: inline-flex; }
+    .motd-style-trigger { min-height: 34px; display: inline-flex; align-items: center; gap: 8px; padding: 6px 10px; border: 1px solid rgba(154,168,189,.22); border-radius: 10px; color: #fff; background: rgba(255,255,255,.065); font-weight: 900; cursor: pointer; }
+    .motd-style-trigger:hover,
+    .motd-style-trigger.is-open { border-color: rgba(47,128,237,.6); background: rgba(47,128,237,.18); }
+    .motd-style-swatch { width: 18px; height: 18px; border-radius: 5px; border: 1px solid rgba(255,255,255,.55); box-shadow: inset 0 0 0 1px rgba(0,0,0,.2); }
+
+    .motd-color-panel { position: absolute; top: calc(100% + 8px); left: 0; z-index: 100; width: 246px; padding: 12px; border: 1px solid rgba(154,168,189,.26); border-radius: 14px; background: rgba(10,16,28,.98); box-shadow: 0 18px 55px rgba(0,0,0,.45); }
+    .motd-color-panel[hidden] { display: none !important; }
+    .motd-color-panel-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
+    .motd-color-panel-title { color: var(--mdt-text); font-size: .78rem; font-weight: 900; letter-spacing: .8px; text-transform: uppercase; }
+    .motd-color-panel-preview { width: 28px; height: 28px; border: 1px solid rgba(255,255,255,.45); border-radius: 8px; }
+    .motd-color-native { width: 100%; height: 52px; padding: 0; border: 1px solid rgba(154,168,189,.24); border-radius: 10px; background: transparent; cursor: pointer; }
+    .motd-color-presets { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; margin: 10px 0; }
+    .motd-color-preset { width: 22px; height: 22px; border: 1px solid rgba(255,255,255,.32); border-radius: 7px; cursor: pointer; }
+    .motd-color-preset:hover { transform: translateY(-1px); border-color: #fff; }
+    .motd-color-fields { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+    .motd-color-hex { min-height: 34px; padding: 7px 9px; border: 1px solid rgba(154,168,189,.24); border-radius: 9px; color: #fff; background: rgba(3,7,18,.72); font-weight: 800; }
+    .motd-color-apply { min-height: 34px; padding: 7px 11px; border: 1px solid rgba(47,128,237,.55); border-radius: 9px; color: #fff; background: rgba(47,128,237,.32); font-weight: 900; cursor: pointer; }
+    .motd-color-apply:hover { background: rgba(47,128,237,.48); }
+
+    .motd-font-library { min-height: 34px; min-width: 205px; max-width: 245px; padding: 7px 8px; border: 1px solid rgba(154,168,189,.22); border-radius: 10px; color: #f8fafc; background: #111827; font-weight: 800; }
+    .motd-font-library option { color: #111827; background: #ffffff; font-weight: 700; }
+    .motd-apply-style-button { min-height: 34px; padding: 7px 10px; border: 1px solid rgba(47,128,237,.38); border-radius: 10px; color: #fff; background: rgba(47,128,237,.18); font-weight: 900; cursor: pointer; }
+    .motd-apply-style-button:hover { background: rgba(47,128,237,.32); }
   `;
   document.head.appendChild(style);
 
@@ -95,40 +115,131 @@
     element.classList.add('is-hidden');
   });
 
-  function createColorGroup({ label, value, title, onApply }) {
-    const group = document.createElement('span');
-    group.className = 'motd-style-group';
-    group.title = title;
-
-    const input = document.createElement('input');
-    input.type = 'color';
-    input.value = value;
-    input.setAttribute('aria-label', title);
-    input.addEventListener('mousedown', saveSelection);
-    input.addEventListener('focus', saveSelection);
-
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = label;
-    button.title = title;
-    button.addEventListener('mousedown', (event) => event.preventDefault());
-    button.addEventListener('click', () => onApply(input.value));
-
-    group.append(input, button);
-    return group;
+  function closeOtherColorPanels(exceptPanel = null) {
+    document.querySelectorAll('.motd-color-panel').forEach((panel) => {
+      if (panel !== exceptPanel) panel.hidden = true;
+    });
+    document.querySelectorAll('.motd-style-trigger').forEach((button) => {
+      if (!exceptPanel || !button.closest('.motd-style-picker')?.contains(exceptPanel)) {
+        button.classList.remove('is-open');
+      }
+    });
   }
 
-  const textColorGroup = createColorGroup({
-    label: '✓',
+  function normalizeHex(value, fallback) {
+    const cleaned = String(value || '').trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(cleaned)) return cleaned;
+    if (/^[0-9a-fA-F]{6}$/.test(cleaned)) return `#${cleaned}`;
+    return fallback;
+  }
+
+  function createColorPicker({ label, value, title, onApply }) {
+    const picker = document.createElement('span');
+    picker.className = 'motd-style-picker';
+
+    const trigger = document.createElement('button');
+    trigger.type = 'button';
+    trigger.className = 'motd-style-trigger';
+    trigger.title = title;
+
+    const swatch = document.createElement('span');
+    swatch.className = 'motd-style-swatch';
+    swatch.style.backgroundColor = value;
+
+    const text = document.createElement('span');
+    text.textContent = label;
+    trigger.append(swatch, text);
+
+    const panel = document.createElement('div');
+    panel.className = 'motd-color-panel';
+    panel.hidden = true;
+
+    const header = document.createElement('div');
+    header.className = 'motd-color-panel-header';
+    const titleElement = document.createElement('span');
+    titleElement.className = 'motd-color-panel-title';
+    titleElement.textContent = title;
+    const preview = document.createElement('span');
+    preview.className = 'motd-color-panel-preview';
+    preview.style.backgroundColor = value;
+    header.append(titleElement, preview);
+
+    const nativePicker = document.createElement('input');
+    nativePicker.type = 'color';
+    nativePicker.className = 'motd-color-native';
+    nativePicker.value = value;
+
+    const presets = document.createElement('div');
+    presets.className = 'motd-color-presets';
+    ['#ffffff', '#94a3b8', '#111827', '#ef4444', '#f97316', '#facc15', '#22c55e', '#06b6d4', '#3b82f6', '#6366f1', '#a855f7', '#ec4899', '#f5c542', '#38bdf8', '#10b981', '#f87171'].forEach((color) => {
+      const preset = document.createElement('button');
+      preset.type = 'button';
+      preset.className = 'motd-color-preset';
+      preset.style.backgroundColor = color;
+      preset.title = color;
+      preset.addEventListener('click', () => setColor(color));
+      presets.appendChild(preset);
+    });
+
+    const fields = document.createElement('div');
+    fields.className = 'motd-color-fields';
+    const hexInput = document.createElement('input');
+    hexInput.type = 'text';
+    hexInput.className = 'motd-color-hex';
+    hexInput.value = value;
+    hexInput.maxLength = 7;
+    const applyButton = document.createElement('button');
+    applyButton.type = 'button';
+    applyButton.className = 'motd-color-apply';
+    applyButton.textContent = 'Appliquer ✓';
+    fields.append(hexInput, applyButton);
+
+    function setColor(color) {
+      const normalized = normalizeHex(color, nativePicker.value);
+      nativePicker.value = normalized;
+      hexInput.value = normalized;
+      preview.style.backgroundColor = normalized;
+      swatch.style.backgroundColor = normalized;
+    }
+
+    nativePicker.addEventListener('input', () => setColor(nativePicker.value));
+    hexInput.addEventListener('input', () => setColor(hexInput.value));
+    applyButton.addEventListener('mousedown', (event) => event.preventDefault());
+    applyButton.addEventListener('click', () => {
+      const color = normalizeHex(hexInput.value, nativePicker.value);
+      setColor(color);
+      onApply(color);
+      panel.hidden = true;
+      trigger.classList.remove('is-open');
+    });
+
+    trigger.addEventListener('mousedown', saveSelection);
+    trigger.addEventListener('click', (event) => {
+      event.preventDefault();
+      saveSelection();
+      const willOpen = panel.hidden;
+      closeOtherColorPanels(panel);
+      panel.hidden = !willOpen;
+      trigger.classList.toggle('is-open', willOpen);
+    });
+
+    panel.addEventListener('mousedown', saveSelection);
+    panel.append(header, nativePicker, presets, fields);
+    picker.append(trigger, panel);
+    return picker;
+  }
+
+  const textColorPicker = createColorPicker({
+    label: 'Texte',
     value: '#ffffff',
-    title: 'Choisir puis appliquer la couleur du texte',
+    title: 'Couleur texte',
     onApply: (color) => wrapSelectionWithSpan({ color }, 'Texte coloré'),
   });
 
-  const highlightColorGroup = createColorGroup({
-    label: '✓',
+  const highlightColorPicker = createColorPicker({
+    label: 'Surlignage',
     value: '#f5c542',
-    title: 'Choisir puis appliquer la couleur de surlignement',
+    title: 'Surlignage',
     onApply: (color) => wrapSelectionWithSpan({ backgroundColor: color, color: '#111827', padding: '1px 4px', borderRadius: '4px' }, 'Texte surligné'),
   });
 
@@ -159,7 +270,13 @@
   applyFont.addEventListener('mousedown', (event) => event.preventDefault());
   applyFont.addEventListener('click', () => wrapSelectionWithSpan({ fontFamily: fontSelect.value }, 'Texte'));
 
-  toolbar.append(textColorGroup, highlightColorGroup, fontSelect, applyFont);
+  toolbar.append(textColorPicker, highlightColorPicker, fontSelect, applyFont);
+
+  document.addEventListener('click', (event) => {
+    if (!event.target.closest('.motd-style-picker')) {
+      closeOtherColorPanels();
+    }
+  });
 
   async function uploadSelectedFile(file) {
     const formData = new FormData();

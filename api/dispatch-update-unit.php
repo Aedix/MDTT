@@ -26,6 +26,7 @@ $serviceCode = (string) ($user['active_service_code'] ?? $user['service'] ?? '')
 $unitId = (int) ($data['unit_id'] ?? 0);
 $name = trim((string) ($data['name'] ?? ''));
 $status = trim((string) ($data['status'] ?? 'Disponible'));
+$comment = trim((string) ($data['comment'] ?? ''));
 $divisionId = (int) ($data['division_id'] ?? 0);
 $ppaLevel = trim((string) ($data['ppa_level'] ?? 'PPA I'));
 $memberIds = $data['member_ids'] ?? [];
@@ -39,6 +40,19 @@ if ($serviceCode === '' || $unitId <= 0) {
 if ($name === '' || mb_strlen($name) > 80 || $status === '' || mb_strlen($status) > 80) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Nom ou statut invalide.']);
+    exit;
+}
+
+if (mb_strlen($comment) > 160) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Commentaire trop long.']);
+    exit;
+}
+
+$allowedStatuses = ['Disponible', 'Non affecté', 'Patrouille', 'Intervention', 'Pause', 'Transport', 'En attente', 'Indisponible'];
+if (!in_array($status, $allowedStatuses, true)) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Statut invalide.']);
     exit;
 }
 
@@ -115,6 +129,7 @@ $updateStatement = $pdo->prepare(
      SET division_id = :division_id,
          name = :name,
          status = :status,
+         comment = :comment,
          ppa_level = :ppa_level
      WHERE id = :unit_id'
 );
@@ -122,6 +137,7 @@ $updateStatement->execute([
     'division_id' => $divisionId,
     'name' => $name,
     'status' => $status,
+    'comment' => $comment !== '' ? $comment : null,
     'ppa_level' => $ppaLevel,
     'unit_id' => $unitId,
 ]);

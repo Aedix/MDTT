@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/realtime.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -56,6 +57,8 @@ if (!$service) {
     exit;
 }
 
+$serviceId = (int) $service['id'];
+
 $statement = $pdo->prepare(
     'INSERT INTO service_motd (service_id, title, body, updated_by)
      VALUES (:service_id, :title, :body, :updated_by)
@@ -66,10 +69,16 @@ $statement = $pdo->prepare(
        updated_at = CURRENT_TIMESTAMP'
 );
 $statement->execute([
-    'service_id' => (int) $service['id'],
+    'service_id' => $serviceId,
     'title' => $title,
     'body' => $body,
     'updated_by' => (int) $user['id'],
 ]);
 
-echo json_encode(['success' => true, 'message' => 'Annonce mise a jour.']);
+touchRealtimeVersion($pdo, $serviceId);
+
+echo json_encode([
+    'success' => true,
+    'message' => 'Annonce mise a jour.',
+    'version' => getRealtimeVersion($pdo, $serviceId),
+]);

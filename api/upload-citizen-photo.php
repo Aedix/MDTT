@@ -21,10 +21,20 @@ if (empty($_FILES['photo']) || !is_array($_FILES['photo'])) {
 }
 
 $file = $_FILES['photo'];
+$error = (int) ($file['error'] ?? UPLOAD_ERR_NO_FILE);
 
-if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+if ($error !== UPLOAD_ERR_OK) {
+    $messages = [
+        UPLOAD_ERR_INI_SIZE => 'Photo trop lourde pour la configuration serveur.',
+        UPLOAD_ERR_FORM_SIZE => 'Photo trop lourde pour le formulaire.',
+        UPLOAD_ERR_PARTIAL => 'Upload incomplet.',
+        UPLOAD_ERR_NO_FILE => 'Aucune photo envoyee.',
+        UPLOAD_ERR_NO_TMP_DIR => 'Dossier temporaire serveur manquant.',
+        UPLOAD_ERR_CANT_WRITE => 'Impossible d ecrire le fichier sur le serveur.',
+        UPLOAD_ERR_EXTENSION => 'Upload bloque par une extension serveur.',
+    ];
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Upload impossible.']);
+    echo json_encode(['success' => false, 'message' => $messages[$error] ?? 'Upload impossible.']);
     exit;
 }
 

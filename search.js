@@ -30,6 +30,48 @@ function setMessage(message, type = 'error') {
   box.dataset.type = type;
 }
 
+function ensurePhotoModal() {
+  let modal = document.querySelector('#citizenPhotoModal');
+  if (modal) return modal;
+
+  modal = document.createElement('div');
+  modal.id = 'citizenPhotoModal';
+  modal.className = 'citizen-photo-modal';
+  modal.hidden = true;
+  modal.innerHTML = `
+    <div class="citizen-photo-modal-card">
+      <button type="button" class="citizen-photo-modal-close" aria-label="Fermer">×</button>
+      <img id="citizenPhotoModalImage" alt="Photo citoyen agrandie">
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal || event.target.closest('.citizen-photo-modal-close')) {
+      modal.hidden = true;
+    }
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') modal.hidden = true;
+  });
+
+  return modal;
+}
+
+function openPhotoModal() {
+  const path = getInput('citizenPhotoPath');
+  if (!path) {
+    setMessage('Aucune photo à agrandir pour cette fiche.', 'info');
+    return;
+  }
+
+  const modal = ensurePhotoModal();
+  const image = modal.querySelector('#citizenPhotoModalImage');
+  image.src = path;
+  modal.hidden = false;
+}
+
 async function apiGet(url) {
   const response = await fetch(url, { credentials: 'same-origin', cache: 'no-store' });
   const result = await response.json();
@@ -351,7 +393,13 @@ function bindCitizenPanelEvents() {
 
   const photoTrigger = document.querySelector('#citizenPhotoTrigger');
   const photoInput = document.querySelector('#citizenPhotoInput');
+  const photoExpand = document.querySelector('#citizenPhotoExpand');
+
   photoTrigger?.addEventListener('click', () => photoInput?.click());
+  photoExpand?.addEventListener('click', (event) => {
+    event.stopPropagation();
+    openPhotoModal();
+  });
 
   photoInput?.addEventListener('change', async (event) => {
     const file = event.target.files?.[0];

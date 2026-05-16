@@ -2,6 +2,22 @@
 
 declare(strict_types=1);
 
+function isSafeMdtContentUrl(string $url): bool
+{
+    $decoded = html_entity_decode($url, ENT_QUOTES, 'UTF-8');
+
+    if (filter_var($decoded, FILTER_VALIDATE_URL) && preg_match('/^https?:\/\//i', $decoded)) {
+        return true;
+    }
+
+    return (bool) preg_match('/^\/uploads\/motd\/[a-zA-Z0-9_\-\.\/]+$/', $decoded);
+}
+
+function escapeMdtContentUrl(string $url): string
+{
+    return htmlspecialchars(html_entity_decode($url, ENT_QUOTES, 'UTF-8'), ENT_QUOTES, 'UTF-8');
+}
+
 function renderBbCode(string $input): string
 {
     $safe = htmlspecialchars($input, ENT_QUOTES, 'UTF-8');
@@ -39,39 +55,35 @@ function renderBbCode(string $input): string
         return '<span style="font-family:' . $font . '">' . $matches[2] . '</span>';
     }, $safe) ?? $safe;
 
-    $safe = preg_replace_callback('/\[url\](https?:\/\/[^\s\[]+)\[\/url\]/i', static function (array $matches): string {
-        $url = filter_var(html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8'), FILTER_VALIDATE_URL);
-        if (!$url) {
+    $safe = preg_replace_callback('/\[url\]((?:https?:\/\/[^\s\[]+)|(?:\/uploads\/motd\/[a-zA-Z0-9_\-\.\/]+))\[\/url\]/i', static function (array $matches): string {
+        if (!isSafeMdtContentUrl($matches[1])) {
             return $matches[0];
         }
-        $escapedUrl = htmlspecialchars($url, ENT_QUOTES, 'UTF-8');
+        $escapedUrl = escapeMdtContentUrl($matches[1]);
         return '<a href="' . $escapedUrl . '" target="_blank" rel="noopener noreferrer">' . $escapedUrl . '</a>';
     }, $safe) ?? $safe;
 
-    $safe = preg_replace_callback('/\[url=(https?:\/\/[^\s\]]+)\](.*?)\[\/url\]/i', static function (array $matches): string {
-        $url = filter_var(html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8'), FILTER_VALIDATE_URL);
-        if (!$url) {
+    $safe = preg_replace_callback('/\[url=((?:https?:\/\/[^\s\]]+)|(?:\/uploads\/motd\/[a-zA-Z0-9_\-\.\/]+))\](.*?)\[\/url\]/i', static function (array $matches): string {
+        if (!isSafeMdtContentUrl($matches[1])) {
             return $matches[0];
         }
-        $escapedUrl = htmlspecialchars($url, ENT_QUOTES, 'UTF-8');
+        $escapedUrl = escapeMdtContentUrl($matches[1]);
         return '<a href="' . $escapedUrl . '" target="_blank" rel="noopener noreferrer">' . $matches[2] . '</a>';
     }, $safe) ?? $safe;
 
-    $safe = preg_replace_callback('/\[img\](https?:\/\/[^\s\[]+)\[\/img\]/i', static function (array $matches): string {
-        $url = filter_var(html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8'), FILTER_VALIDATE_URL);
-        if (!$url) {
+    $safe = preg_replace_callback('/\[img\]((?:https?:\/\/[^\s\[]+)|(?:\/uploads\/motd\/[a-zA-Z0-9_\-\.\/]+))\[\/img\]/i', static function (array $matches): string {
+        if (!isSafeMdtContentUrl($matches[1])) {
             return $matches[0];
         }
-        $escapedUrl = htmlspecialchars($url, ENT_QUOTES, 'UTF-8');
+        $escapedUrl = escapeMdtContentUrl($matches[1]);
         return '<img class="bbcode-image" src="' . $escapedUrl . '" alt="Image annonce" loading="lazy" />';
     }, $safe) ?? $safe;
 
-    $safe = preg_replace_callback('/\[file=(https?:\/\/[^\s\]]+)\](.*?)\[\/file\]/i', static function (array $matches): string {
-        $url = filter_var(html_entity_decode($matches[1], ENT_QUOTES, 'UTF-8'), FILTER_VALIDATE_URL);
-        if (!$url) {
+    $safe = preg_replace_callback('/\[file=((?:https?:\/\/[^\s\]]+)|(?:\/uploads\/motd\/[a-zA-Z0-9_\-\.\/]+))\](.*?)\[\/file\]/i', static function (array $matches): string {
+        if (!isSafeMdtContentUrl($matches[1])) {
             return $matches[0];
         }
-        $escapedUrl = htmlspecialchars($url, ENT_QUOTES, 'UTF-8');
+        $escapedUrl = escapeMdtContentUrl($matches[1]);
         return '<a class="bbcode-file" href="' . $escapedUrl . '" target="_blank" rel="noopener noreferrer">' . $matches[2] . '</a>';
     }, $safe) ?? $safe;
 

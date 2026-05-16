@@ -239,7 +239,7 @@ if ($activeShift) {
 
       <nav class="mdt-nav" aria-label="Navigation MDT">
         <a href="/dashboard.php" class="mdt-nav-link active">Dashboard</a>
-        <a href="#" class="mdt-nav-link disabled">Recherches <span class="mdt-placeholder">Soon</span></a>
+        <a href="/search.php" class="mdt-nav-link">Recherches</a>
         <a href="#" class="mdt-nav-link disabled">Dossiers <span class="mdt-placeholder">Soon</span></a>
         <a href="#" class="mdt-nav-link disabled">Rapports <span class="mdt-placeholder">Soon</span></a>
         <a href="#" class="mdt-nav-link disabled">Dispatch <span class="mdt-placeholder">Soon</span></a>

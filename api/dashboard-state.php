@@ -305,7 +305,8 @@ foreach ($dispatchUnits as $unit) {
 }
 
 $motdTitle = (string) ($serviceInfo['motd_title'] ?? 'Annonce opérationnelle');
-$motdBody = (string) ($serviceInfo['motd_body'] ?? 'Aucune annonce active pour le moment.');
+$motdBody = (string) ($serviceInfo['motd_body'] ?? '');
+$motdHtml = trim($motdBody) === '' ? '<p class="mdt-muted-line">Aucune annonce active pour le moment.</p>' : renderBbCode($motdBody);
 
 $state = [
     'success' => true,
@@ -314,7 +315,7 @@ $state = [
     'motd' => [
         'title' => $motdTitle,
         'body_raw' => $motdBody,
-        'body_html' => renderBbCode($motdBody),
+        'body_html' => $motdHtml,
         'updated_label' => updatedLabel($serviceInfo['motd_updated_at'] ?? null, $serviceInfo['motd_updated_by'] ?? null),
         'lock' => [
             'is_locked' => (bool) $lock,

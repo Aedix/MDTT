@@ -6,6 +6,8 @@ motdEditorStylesheet.textContent = `
   .mdt-editor-toolbar button.is-active { border-color: rgba(47,128,237,.7); background: rgba(47,128,237,.32); color: #fff; }
   .mdt-editor-toolbar .motd-color-input { width: 34px; min-height: 34px; padding: 2px; border: 1px solid rgba(154,168,189,.22); border-radius: 9px; background: rgba(255,255,255,.065); cursor: pointer; }
   .mdt-editor-toolbar .motd-font-select { min-height: 34px; max-width: 150px; padding: 7px 8px; border: 1px solid rgba(154,168,189,.22); border-radius: 9px; color: var(--mdt-text); background: rgba(255,255,255,.065); font-weight: 800; }
+  .mdt-editor-toolbar .motd-apply-style-button { min-height: 34px; padding: 7px 10px; border: 1px solid rgba(47,128,237,.38); border-radius: 9px; color: #fff; background: rgba(47,128,237,.18); font-weight: 900; }
+  .mdt-editor-toolbar .motd-apply-style-button:hover { background: rgba(47,128,237,.32); }
   .mdt-motd-card.is-locked { outline: 1px solid rgba(245,197,66,.5); box-shadow: 0 0 0 3px rgba(245,197,66,.08), 0 18px 50px rgba(0,0,0,.22); }
   .motd-lock-badge { padding: 8px 11px; border: 1px solid rgba(245,197,66,.4); border-radius: 999px; color: var(--mdt-warning); background: rgba(245,197,66,.09); font-size: .82rem; font-weight: 800; white-space: nowrap; }
   .bbcode-image.is-draggable { cursor: grab; }
@@ -44,6 +46,7 @@ let originalViewHtml = motdView?.innerHTML || '';
 let motdLockHeartbeat = null;
 let motdLockedByOther = false;
 let currentMotdLockUser = null;
+let savedEditorRange = null;
 
 function setMotdMessage(message, type = 'error') {
   if (!motdMessage) return;
@@ -53,6 +56,22 @@ function setMotdMessage(message, type = 'error') {
 
 function isMotdEditing() {
   return Boolean(motdEditor && !motdEditor.hidden);
+}
+
+function saveEditorSelection() {
+  const selection = window.getSelection();
+  if (!selection || selection.rangeCount === 0) return;
+  if (!motdRichEditor.contains(selection.anchorNode)) return;
+  savedEditorRange = selection.getRangeAt(0).cloneRange();
+}
+
+function restoreEditorSelection() {
+  focusRichEditor();
+  if (!savedEditorRange) return;
+  const selection = window.getSelection();
+  if (!selection) return;
+  selection.removeAllRanges();
+  selection.addRange(savedEditorRange);
 }
 
 function setMotdLockVisual(lock) {
@@ -121,6 +140,7 @@ function selectNodeContents(node) {
   range.selectNodeContents(node);
   selection.removeAllRanges();
   selection.addRange(range);
+  saveEditorSelection();
 }
 
 function wrapSelectionWithElement(tagName, defaultText = 'Texte') {
@@ -143,7 +163,7 @@ function wrapSelectionWithElement(tagName, defaultText = 'Texte') {
 }
 
 function wrapSelectionWithSpan(style, defaultText = 'Texte') {
-  focusRichEditor();
+  restoreEditorSelection();
   const selection = window.getSelection();
   const span = document.createElement('span');
   Object.assign(span.style, style);
@@ -180,7 +200,7 @@ function wrapSelectionAsCode() {
 }
 
 function insertHtmlAtSelection(html) {
-  focusRichEditor();
+  restoreEditorSelection();
   document.execCommand('insertHTML', false, html);
   makeImagesDraggable();
 }
@@ -309,9 +329,18 @@ function updateToolbarActiveStates() {
   });
 }
 
-document.addEventListener('selectionchange', updateToolbarActiveStates);
-motdRichEditor.addEventListener('keyup', updateToolbarActiveStates);
-motdRichEditor.addEventListener('mouseup', updateToolbarActiveStates);
+document.addEventListener('selectionchange', () => {
+  saveEditorSelection();
+  updateToolbarActiveStates();
+});
+motdRichEditor.addEventListener('keyup', () => {
+  saveEditorSelection();
+  updateToolbarActiveStates();
+});
+motdRichEditor.addEventListener('mouseup', () => {
+  saveEditorSelection();
+  updateToolbarActiveStates();
+});
 
 function addAdvancedToolbarControls() {
   if (!motdToolbar || motdToolbar.dataset.advanced === '1') return;
@@ -320,29 +349,56 @@ function addAdvancedToolbarControls() {
   const textColor = document.createElement('input');
   textColor.type = 'color';
   textColor.value = '#ffffff';
-  textColor.title = 'Couleur du texte';
+  textColor.title = 'Choisir la couleur du texte';
   textColor.className = 'motd-color-input';
-  textColor.addEventListener('input', () => wrapSelectionWithSpan({ color: textColor.value }, 'Texte coloré'));
+  textColor.addEventListener('mousedown', saveEditorSelection);
+  textColor.addEventListener('focus', saveEditorSelection);
+
+  const applyTextColor = document.createElement('button');
+  applyTextColor.type = 'button';
+  applyTextColor.className = 'motd-apply-style-button';
+  applyTextColor.textContent = 'Texte ✓';
+  applyTextColor.title = 'Appliquer la couleur du texte sélectionnée';
+  applyTextColor.addEventListener('mousedown', (event) => event.preventDefault());
+  applyTextColor.addEventListener('click', () => wrapSelectionWithSpan({ color: textColor.value }, 'Texte coloré'));
 
   const highlightColor = document.createElement('input');
   highlightColor.type = 'color';
   highlightColor.value = '#f5c542';
-  highlightColor.title = 'Couleur de surlignement';
+  highlightColor.title = 'Choisir la couleur de surlignement';
   highlightColor.className = 'motd-color-input';
-  highlightColor.addEventListener('input', () => wrapSelectionWithSpan({ backgroundColor: highlightColor.value, color: '#111827', padding: '1px 4px', borderRadius: '4px' }, 'Texte surligné'));
+  highlightColor.addEventListener('mousedown', saveEditorSelection);
+  highlightColor.addEventListener('focus', saveEditorSelection);
+
+  const applyHighlightColor = document.createElement('button');
+  applyHighlightColor.type = 'button';
+  applyHighlightColor.className = 'motd-apply-style-button';
+  applyHighlightColor.textContent = 'Surligner ✓';
+  applyHighlightColor.title = 'Appliquer la couleur de surlignement sélectionnée';
+  applyHighlightColor.addEventListener('mousedown', (event) => event.preventDefault());
+  applyHighlightColor.addEventListener('click', () => wrapSelectionWithSpan({ backgroundColor: highlightColor.value, color: '#111827', padding: '1px 4px', borderRadius: '4px' }, 'Texte surligné'));
 
   const fontSelect = document.createElement('select');
   fontSelect.className = 'motd-font-select';
-  fontSelect.title = 'Police du texte';
+  fontSelect.title = 'Choisir la police du texte';
   ['Inter', 'Arial', 'Verdana', 'Georgia', 'Times New Roman', 'Courier New', 'Trebuchet MS'].forEach((font) => {
     const option = document.createElement('option');
     option.value = font;
     option.textContent = font;
     fontSelect.appendChild(option);
   });
-  fontSelect.addEventListener('change', () => wrapSelectionWithSpan({ fontFamily: fontSelect.value }, 'Texte'));
+  fontSelect.addEventListener('mousedown', saveEditorSelection);
+  fontSelect.addEventListener('focus', saveEditorSelection);
 
-  motdToolbar.append(textColor, highlightColor, fontSelect);
+  const applyFont = document.createElement('button');
+  applyFont.type = 'button';
+  applyFont.className = 'motd-apply-style-button';
+  applyFont.textContent = 'Police ✓';
+  applyFont.title = 'Appliquer la police sélectionnée';
+  applyFont.addEventListener('mousedown', (event) => event.preventDefault());
+  applyFont.addEventListener('click', () => wrapSelectionWithSpan({ fontFamily: fontSelect.value }, 'Texte'));
+
+  motdToolbar.append(textColor, applyTextColor, highlightColor, applyHighlightColor, fontSelect, applyFont);
 }
 
 addAdvancedToolbarControls();
@@ -385,6 +441,7 @@ function openMotdEditor() {
   makeImagesDraggable();
   setMotdMessage('');
   focusRichEditor();
+  saveEditorSelection();
 }
 
 async function closeMotdEditor(releaseLock = true) {
@@ -395,6 +452,7 @@ async function closeMotdEditor(releaseLock = true) {
   if (motdEditButton) motdEditButton.hidden = false;
   if (motdSaveButton) motdSaveButton.hidden = true;
   if (motdCancelButton) motdCancelButton.hidden = true;
+  savedEditorRange = null;
   stopMotdHeartbeat();
   if (releaseLock) await requestMotdLock('release');
 }
@@ -436,6 +494,7 @@ motdToolbar?.querySelectorAll('button').forEach((button) => {
     else if (wrap === '[code]|[/code]') wrapSelectionAsCode();
     else if (insert) promptAndInsert(insert);
     updateToolbarActiveStates();
+    saveEditorSelection();
   });
 });
 

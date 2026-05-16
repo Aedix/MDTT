@@ -16,6 +16,49 @@ $activeServiceName = (string) ($user['active_service_name'] ?? $activeServiceCod
 $activeRankName = (string) ($user['active_rank_name'] ?? $user['rank_name'] ?? 'Non défini');
 $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
 
+$statuses = ['Disponible', 'Non affecté', 'Patrouille', 'Intervention', 'Pause', 'Transport', 'En attente', 'Indisponible'];
+$ppaLevels = ['PPA I', 'PPA II', 'PPA III', 'PPA IV'];
+
+function statusClass(string $status): string
+{
+    return match ($status) {
+        'Disponible' => 'status-available',
+        'Patrouille' => 'status-patrol',
+        'Intervention' => 'status-intervention',
+        'Pause' => 'status-pause',
+        'Transport' => 'status-transport',
+        'En attente' => 'status-waiting',
+        'Indisponible' => 'status-unavailable',
+        default => 'status-unassigned',
+    };
+}
+
+function memberSummary(array $members): string
+{
+    $count = count($members);
+
+    if ($count === 0) {
+        return 'Aucun agent';
+    }
+
+    $first = (string) ($members[0]['username'] ?? 'Agent');
+
+    if ($count === 1) {
+        return $first;
+    }
+
+    return $first . ' + ' . ($count - 1);
+}
+
+function memberTooltip(array $members): string
+{
+    if (empty($members)) {
+        return 'Aucun agent affecté';
+    }
+
+    return implode(', ', array_map(static fn (array $member): string => (string) $member['username'], $members));
+}
+
 $serviceInfo = [
     'service_id' => null,
     'motd_title' => 'Annonce opérationnelle',
@@ -75,8 +118,11 @@ $onDutyAgents = [];
 $divisions = [];
 $dispatchUnits = [];
 $unitMembers = [];
+$agentAssignments = [];
 
 try {
+    $serviceId = (int) ($serviceInfo['service_id'] ?? 0);
+
     $shiftStatement = $pdo->prepare(
         'SELECT id, started_at
          FROM service_shifts
@@ -88,7 +134,7 @@ try {
     );
     $shiftStatement->execute([
         'user_id' => (int) $user['id'],
-        'service_id' => (int) ($serviceInfo['service_id'] ?? 0),
+        'service_id' => $serviceId,
     ]);
     $activeShift = $shiftStatement->fetch() ?: null;
 
@@ -100,7 +146,7 @@ try {
            AND ss.ended_at IS NULL
          ORDER BY u.username ASC'
     );
-    $agentsStatement->execute(['service_id' => (int) ($serviceInfo['service_id'] ?? 0)]);
+    $agentsStatement->execute(['service_id' => $serviceId]);
     $onDutyAgents = $agentsStatement->fetchAll();
 
     $divisionsStatement = $pdo->prepare(
@@ -110,18 +156,19 @@ try {
            AND is_active = 1
          ORDER BY sort_order ASC, name ASC'
     );
-    $divisionsStatement->execute(['service_id' => (int) ($serviceInfo['service_id'] ?? 0)]);
+    $divisionsStatement->execute(['service_id' => $serviceId]);
     $divisions = $divisionsStatement->fetchAll();
 
     $unitsStatement = $pdo->prepare(
-        'SELECT du.id, du.name, du.status, du.ppa_level, du.division_id, d.name AS division_name
+        'SELECT du.id, du.name, du.status, du.comment, du.ppa_level, du.division_id, du.created_by, d.name AS division_name, creator.username AS creator_username
          FROM dispatch_units du
          LEFT JOIN divisions d ON d.id = du.division_id
+         LEFT JOIN users creator ON creator.id = du.created_by
          WHERE du.service_id = :service_id
            AND du.is_active = 1
          ORDER BY du.created_at ASC'
     );
-    $unitsStatement->execute(['service_id' => (int) ($serviceInfo['service_id'] ?? 0)]);
+    $unitsStatement->execute(['service_id' => $serviceId]);
     $dispatchUnits = $unitsStatement->fetchAll();
 
     $membersStatement = $pdo->prepare(
@@ -134,9 +181,19 @@ try {
            AND dum.is_active = 1
          ORDER BY u.username ASC'
     );
-    $membersStatement->execute(['service_id' => (int) ($serviceInfo['service_id'] ?? 0)]);
+    $membersStatement->execute(['service_id' => $serviceId]);
     foreach ($membersStatement->fetchAll() as $memberRow) {
         $unitMembers[(int) $memberRow['unit_id']][] = $memberRow;
+    }
+
+    foreach ($dispatchUnits as $unit) {
+        foreach (($unitMembers[(int) $unit['id']] ?? []) as $member) {
+            $agentAssignments[(int) $member['user_id']] = [
+                'unit_name' => (string) $unit['name'],
+                'unit_status' => (string) $unit['status'],
+                'status_class' => statusClass((string) $unit['status']),
+            ];
+        }
     }
 } catch (Throwable $exception) {
     $activeShift = null;
@@ -144,6 +201,7 @@ try {
     $divisions = [];
     $dispatchUnits = [];
     $unitMembers = [];
+    $agentAssignments = [];
 }
 
 $shiftLabel = 'Hors service';
@@ -160,7 +218,7 @@ if ($activeShift) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>MDT - <?= htmlspecialchars($activeServiceCode, ENT_QUOTES, 'UTF-8') ?></title>
   <link rel="stylesheet" href="/style.css?v=11" />
-  <link rel="stylesheet" href="/mdt.css?v=6" />
+  <link rel="stylesheet" href="/mdt.css?v=7" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">
   <div class="mdt-shell">
@@ -248,15 +306,14 @@ if ($activeShift) {
               <button type="button" data-insert="image">Image</button>
               <button type="button" data-insert="file">Fichier</button>
             </div>
-
             <textarea id="motdBody" name="body" maxlength="2000" required><?= htmlspecialchars((string) ($serviceInfo['motd_body'] ?? ''), ENT_QUOTES, 'UTF-8') ?></textarea>
           </div>
           <p id="motdMessage" class="form-message"></p>
         </section>
 
-        <section class="mdt-dashboard-grid">
+        <section class="mdt-operations-grid">
           <article class="mdt-card mdt-panel mdt-dispatch-panel">
-            <div class="mdt-panel-header">
+            <div class="mdt-panel-header compact">
               <div>
                 <p class="mdt-kicker">Dispatch</p>
                 <h3>Unités actives</h3>
@@ -266,10 +323,16 @@ if ($activeShift) {
 
             <p id="dispatchMessage" class="form-message"></p>
 
-            <form id="createUnitForm" class="dispatch-create-form" hidden>
-              <div class="dispatch-form-grid">
+            <form id="createUnitForm" class="dispatch-create-form compact" hidden>
+              <input type="hidden" name="member_ids" class="dispatch-members-input" value="<?= $activeShift ? (int) $user['id'] : '' ?>" />
+              <div class="dispatch-compact-edit-grid">
+                <span class="dispatch-status-dot status-available"></span>
                 <input type="text" name="name" value="<?= htmlspecialchars($activeServiceCode . '-01', ENT_QUOTES, 'UTF-8') ?>" aria-label="Nom unité" required />
-                <input type="text" name="status" value="Disponible" aria-label="Statut unité" required />
+                <select name="status" aria-label="Statut unité">
+                  <?php foreach ($statuses as $status): ?>
+                    <option <?= $status === 'Disponible' ? 'selected' : '' ?>><?= htmlspecialchars($status, ENT_QUOTES, 'UTF-8') ?></option>
+                  <?php endforeach; ?>
+                </select>
                 <select name="division_id" aria-label="Division">
                   <option value="0">Aucune division</option>
                   <?php foreach ($divisions as $division): ?>
@@ -277,39 +340,29 @@ if ($activeShift) {
                   <?php endforeach; ?>
                 </select>
                 <select name="ppa_level" aria-label="PPA">
-                  <option>PPA I</option>
-                  <option>PPA II</option>
-                  <option>PPA III</option>
-                  <option>PPA IV</option>
+                  <?php foreach ($ppaLevels as $ppa): ?>
+                    <option><?= htmlspecialchars($ppa, ENT_QUOTES, 'UTF-8') ?></option>
+                  <?php endforeach; ?>
                 </select>
-              </div>
-
-              <div class="dispatch-members-picker">
-                <?php if (empty($onDutyAgents)): ?>
-                  <p class="mdt-muted-line">Aucun agent en service : impossible de créer une unité.</p>
-                <?php endif; ?>
-                <?php foreach ($onDutyAgents as $agent): ?>
-                  <label>
-                    <input type="checkbox" class="dispatch-member-checkbox" value="<?= (int) $agent['id'] ?>" <?= ((int) $agent['id'] === (int) $user['id']) ? 'checked' : '' ?> />
-                    <?= htmlspecialchars((string) $agent['username'], ENT_QUOTES, 'UTF-8') ?>
-                  </label>
-                <?php endforeach; ?>
-              </div>
-
-              <div class="mdt-form-actions">
-                <button type="submit" class="mdt-button">Créer</button>
-                <button type="button" id="cancelCreateUnitButton" class="mdt-button-secondary">Annuler</button>
+                <button type="button" class="dispatch-agent-button" data-members="<?= $activeShift ? (int) $user['id'] : '' ?>">Affecter agents</button>
+                <input type="text" name="comment" maxlength="160" placeholder="Commentaire" aria-label="Commentaire" />
+                <div class="dispatch-row-actions compact">
+                  <button type="submit" class="dispatch-icon-action validate" title="Créer">✓</button>
+                  <button type="button" id="cancelCreateUnitButton" class="dispatch-icon-action cancel" title="Annuler">↩</button>
+                </div>
               </div>
             </form>
 
-            <div class="mdt-dispatch-table">
-              <div class="mdt-dispatch-row header">
+            <div class="dispatch-list">
+              <div class="dispatch-list-header">
+                <span></span>
                 <span>Unité</span>
                 <span>Statut</span>
                 <span>Division</span>
                 <span>PPA</span>
                 <span>Agents</span>
-                <span>Actions</span>
+                <span>Commentaire</span>
+                <span></span>
               </div>
 
               <?php if (empty($dispatchUnits)): ?>
@@ -317,10 +370,38 @@ if ($activeShift) {
               <?php endif; ?>
 
               <?php foreach ($dispatchUnits as $unit): ?>
-                <?php $currentMembers = $unitMembers[(int) $unit['id']] ?? []; ?>
-                <form class="dispatch-update-form mdt-dispatch-row unit" data-unit-id="<?= (int) $unit['id'] ?>">
+                <?php
+                  $unitId = (int) $unit['id'];
+                  $currentMembers = $unitMembers[$unitId] ?? [];
+                  $memberIds = implode(',', array_map(static fn (array $member): string => (string) $member['user_id'], $currentMembers));
+                  $summary = memberSummary($currentMembers);
+                  $tooltip = memberTooltip($currentMembers);
+                  $status = (string) $unit['status'];
+                  $rowClass = statusClass($status);
+                ?>
+                <div class="dispatch-view-row" data-unit-id="<?= $unitId ?>">
+                  <span class="dispatch-status-dot <?= htmlspecialchars($rowClass, ENT_QUOTES, 'UTF-8') ?>"></span>
+                  <strong><?= htmlspecialchars((string) $unit['name'], ENT_QUOTES, 'UTF-8') ?></strong>
+                  <span><?= htmlspecialchars($status, ENT_QUOTES, 'UTF-8') ?></span>
+                  <span><?= htmlspecialchars((string) ($unit['division_name'] ?? 'Aucune division'), ENT_QUOTES, 'UTF-8') ?></span>
+                  <span><?= htmlspecialchars((string) $unit['ppa_level'], ENT_QUOTES, 'UTF-8') ?></span>
+                  <button type="button" class="dispatch-agent-summary" title="<?= htmlspecialchars($tooltip, ENT_QUOTES, 'UTF-8') ?>" data-members="<?= htmlspecialchars($memberIds, ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars($summary, ENT_QUOTES, 'UTF-8') ?></button>
+                  <span class="dispatch-comment" title="<?= htmlspecialchars((string) ($unit['comment'] ?? ''), ENT_QUOTES, 'UTF-8') ?>"><?= htmlspecialchars((string) ($unit['comment'] ?? '—'), ENT_QUOTES, 'UTF-8') ?></span>
+                  <div class="dispatch-row-actions compact">
+                    <button type="button" class="dispatch-icon-action edit dispatch-edit-button" title="Modifier">✎</button>
+                    <button type="button" class="dispatch-icon-action delete dispatch-close-button" title="Fermer" data-unit-id="<?= $unitId ?>">×</button>
+                  </div>
+                </div>
+
+                <form class="dispatch-update-form dispatch-edit-row" data-unit-id="<?= $unitId ?>" hidden>
+                  <input type="hidden" name="member_ids" class="dispatch-members-input" value="<?= htmlspecialchars($memberIds, ENT_QUOTES, 'UTF-8') ?>" />
+                  <span class="dispatch-status-dot <?= htmlspecialchars($rowClass, ENT_QUOTES, 'UTF-8') ?>"></span>
                   <input type="text" name="name" value="<?= htmlspecialchars((string) $unit['name'], ENT_QUOTES, 'UTF-8') ?>" aria-label="Nom unité" />
-                  <input type="text" name="status" value="<?= htmlspecialchars((string) $unit['status'], ENT_QUOTES, 'UTF-8') ?>" aria-label="Statut unité" />
+                  <select name="status" aria-label="Statut unité">
+                    <?php foreach ($statuses as $availableStatus): ?>
+                      <option <?= $availableStatus === $status ? 'selected' : '' ?>><?= htmlspecialchars($availableStatus, ENT_QUOTES, 'UTF-8') ?></option>
+                    <?php endforeach; ?>
+                  </select>
                   <select name="division_id" aria-label="Division">
                     <option value="0">Aucune division</option>
                     <?php foreach ($divisions as $division): ?>
@@ -328,30 +409,23 @@ if ($activeShift) {
                     <?php endforeach; ?>
                   </select>
                   <select name="ppa_level" aria-label="PPA">
-                    <?php foreach (['PPA I', 'PPA II', 'PPA III', 'PPA IV'] as $ppa): ?>
-                      <option <?= ((string) $unit['ppa_level'] === $ppa) ? 'selected' : '' ?>><?= $ppa ?></option>
+                    <?php foreach ($ppaLevels as $ppa): ?>
+                      <option <?= ((string) $unit['ppa_level'] === $ppa) ? 'selected' : '' ?>><?= htmlspecialchars($ppa, ENT_QUOTES, 'UTF-8') ?></option>
                     <?php endforeach; ?>
                   </select>
-                  <div class="dispatch-members-picker compact">
-                    <?php foreach ($onDutyAgents as $agent): ?>
-                      <?php $isMember = in_array((int) $agent['id'], array_map(static fn ($m) => (int) $m['user_id'], $currentMembers), true); ?>
-                      <label>
-                        <input type="checkbox" class="dispatch-member-checkbox" value="<?= (int) $agent['id'] ?>" <?= $isMember ? 'checked' : '' ?> />
-                        <?= htmlspecialchars((string) $agent['username'], ENT_QUOTES, 'UTF-8') ?>
-                      </label>
-                    <?php endforeach; ?>
-                  </div>
-                  <div class="dispatch-row-actions">
-                    <button type="submit" class="mdt-button-secondary">Sauver</button>
-                    <button type="button" class="mdt-button-danger dispatch-close-button" data-unit-id="<?= (int) $unit['id'] ?>">Fermer</button>
+                  <button type="button" class="dispatch-agent-button" data-members="<?= htmlspecialchars($memberIds, ENT_QUOTES, 'UTF-8') ?>">Affecter agents</button>
+                  <input type="text" name="comment" maxlength="160" value="<?= htmlspecialchars((string) ($unit['comment'] ?? ''), ENT_QUOTES, 'UTF-8') ?>" placeholder="Commentaire" aria-label="Commentaire" />
+                  <div class="dispatch-row-actions compact">
+                    <button type="submit" class="dispatch-icon-action validate" title="Valider">✓</button>
+                    <button type="button" class="dispatch-icon-action cancel dispatch-cancel-edit-button" title="Annuler">↩</button>
                   </div>
                 </form>
               <?php endforeach; ?>
             </div>
           </article>
 
-          <article class="mdt-card mdt-panel">
-            <div class="mdt-panel-header">
+          <article class="mdt-card mdt-panel mdt-duty-panel">
+            <div class="mdt-panel-header compact">
               <div>
                 <p class="mdt-kicker">Timeclock</p>
                 <h3>Effectifs en service</h3>
@@ -361,30 +435,46 @@ if ($activeShift) {
 
             <p id="shiftTimer" class="mdt-shift-timer"><?= $activeShift ? 'Calcul du temps...' : 'Aucune prise de service active.' ?></p>
 
-            <div class="mdt-duty-list">
+            <div class="mdt-duty-list compact">
               <?php if (empty($onDutyAgents)): ?>
                 <p class="mdt-muted-line">Aucun agent en service actuellement.</p>
               <?php endif; ?>
               <?php foreach ($onDutyAgents as $agent): ?>
-                <div class="mdt-duty-agent">
+                <?php $assignment = $agentAssignments[(int) $agent['id']] ?? null; ?>
+                <div class="mdt-duty-agent compact">
                   <strong><?= htmlspecialchars((string) $agent['username'], ENT_QUOTES, 'UTF-8') ?></strong>
-                  <span><?= htmlspecialchars((string) ($agent['rank_name'] ?? 'Grade inconnu'), ENT_QUOTES, 'UTF-8') ?></span>
-                  <small>Depuis <?= htmlspecialchars((string) $agent['started_at'], ENT_QUOTES, 'UTF-8') ?></small>
+                  <?php if ($assignment): ?>
+                    <span><i class="dispatch-status-dot mini <?= htmlspecialchars((string) $assignment['status_class'], ENT_QUOTES, 'UTF-8') ?>"></i><?= htmlspecialchars($assignment['unit_name'] . ' · ' . $assignment['unit_status'], ENT_QUOTES, 'UTF-8') ?></span>
+                  <?php else: ?>
+                    <span><i class="dispatch-status-dot mini status-unassigned"></i>Non affecté</span>
+                  <?php endif; ?>
                 </div>
               <?php endforeach; ?>
             </div>
           </article>
         </section>
 
-        <section class="mdt-card mdt-panel mdt-modules-bottom">
-          <h3>Modules service</h3>
-          <div class="mdt-module-grid">
-            <div class="mdt-module-tile"><strong>Recherches</strong>Recherche de personnes, dossiers et informations.</div>
-            <div class="mdt-module-tile"><strong>Dossiers</strong>Fiches, enquêtes et suivis.</div>
-            <div class="mdt-module-tile"><strong>Rapports</strong>Compte-rendus opérationnels.</div>
-            <div class="mdt-module-tile"><strong>Divisions</strong>Unités internes et accès dédiés.</div>
+        <aside id="dispatchDrawer" class="dispatch-drawer" hidden>
+          <div class="dispatch-drawer-panel">
+            <div class="mdt-panel-header compact">
+              <div>
+                <p class="mdt-kicker">Dispatch</p>
+                <h3>Affecter agents</h3>
+              </div>
+              <button type="button" id="dispatchDrawerClose" class="dispatch-icon-action delete" title="Fermer">×</button>
+            </div>
+            <div id="dispatchDrawerAgents" class="dispatch-drawer-agents">
+              <?php foreach ($onDutyAgents as $agent): ?>
+                <label>
+                  <input type="checkbox" value="<?= (int) $agent['id'] ?>" />
+                  <span><?= htmlspecialchars((string) $agent['username'], ENT_QUOTES, 'UTF-8') ?></span>
+                  <small><?= htmlspecialchars((string) ($agent['rank_name'] ?? 'Grade inconnu'), ENT_QUOTES, 'UTF-8') ?></small>
+                </label>
+              <?php endforeach; ?>
+            </div>
+            <button type="button" id="dispatchDrawerApply" class="mdt-button">Valider les agents</button>
           </div>
-        </section>
+        </aside>
       </main>
     </div>
   </div>
@@ -404,6 +494,6 @@ if ($activeShift) {
   </script>
   <script src="/motd.js?v=3"></script>
   <script src="/shift.js?v=1"></script>
-  <script src="/dispatch.js?v=1"></script>
+  <script src="/dispatch.js?v=2"></script>
 </body>
 </html>

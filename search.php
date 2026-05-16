@@ -21,7 +21,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   <title>MDT - Recherches</title>
   <link rel="stylesheet" href="/style.css?v=11" />
   <link rel="stylesheet" href="/mdt.css?v=7" />
-  <link rel="stylesheet" href="/search.css?v=1" />
+  <link rel="stylesheet" href="/search.css?v=2" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">
   <div class="mdt-shell">
@@ -76,27 +76,28 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
       </header>
 
       <main class="mdt-content search-page">
-        <section class="mdt-card search-hero-card">
-          <div>
-            <p class="mdt-kicker">Base de données civile</p>
-            <h2>Citoyens & véhicules</h2>
-            <p class="search-muted">Recherche, recensement, véhicules associés et casier judiciaire.</p>
+        <section class="search-command-card">
+          <div class="search-command-title">
+            <p class="mdt-kicker">Base civile</p>
+            <h2>Citoyens</h2>
           </div>
-          <div class="search-actions">
-            <button type="button" id="newCitizenButton" class="mdt-button">Nouveau citoyen</button>
+          <div class="search-command-bar">
+            <input type="search" id="citizenSearchInput" placeholder="Nom, téléphone, adresse, emploi, affiliation, plaque..." autocomplete="off" />
+            <button type="button" id="refreshCitizensButton" class="mdt-button-secondary">↻</button>
+            <button type="button" id="newCitizenButton" class="mdt-button">+ Citoyen</button>
           </div>
         </section>
 
         <section class="search-layout">
-          <article class="mdt-card search-list-card">
-            <div class="search-toolbar">
-              <input type="search" id="citizenSearchInput" placeholder="Rechercher nom, téléphone, adresse, emploi, affiliation, plaque..." autocomplete="off" />
-              <button type="button" id="refreshCitizensButton" class="mdt-button-secondary">Actualiser</button>
+          <aside class="mdt-card search-list-card">
+            <div class="search-list-header">
+              <span>Résultats</span>
+              <small id="citizenCount">—</small>
             </div>
             <div id="citizensList" class="citizens-list">
               <p class="search-empty">Chargement des citoyens...</p>
             </div>
-          </article>
+          </aside>
 
           <article class="mdt-card citizen-panel" id="citizenPanel">
             <div class="citizen-empty-state">
@@ -112,15 +113,16 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
 
   <template id="citizenPanelTemplate">
     <div class="citizen-panel-inner">
-      <div class="citizen-profile-header">
+      <div class="citizen-profile-header compact">
         <div class="citizen-photo-box">
           <img id="citizenPhotoPreview" alt="Photo citoyen" hidden />
-          <span id="citizenPhotoFallback">PHOTO</span>
+          <span id="citizenPhotoFallback">ID</span>
         </div>
-        <div>
+        <div class="citizen-profile-main">
           <p class="mdt-kicker">Fiche citoyen</p>
           <h2 id="citizenFullName">Nouveau citoyen</h2>
           <p id="citizenMeta" class="search-muted">Non enregistré</p>
+          <div class="citizen-quick-tags" id="citizenQuickTags"></div>
         </div>
         <div class="citizen-panel-actions">
           <button type="button" id="saveCitizenButton" class="mdt-button">Sauvegarder</button>
@@ -131,10 +133,18 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
       <input type="hidden" id="citizenId" />
       <input type="hidden" id="citizenPhotoPath" />
 
-      <div class="citizen-form-grid">
-        <section>
-          <h3>Identité</h3>
-          <div class="form-grid two">
+      <nav class="citizen-tabs" aria-label="Sections fiche citoyen">
+        <button type="button" class="citizen-tab active" data-tab="identity">Identité</button>
+        <button type="button" class="citizen-tab" data-tab="physical">Physique</button>
+        <button type="button" class="citizen-tab" data-tab="rp">RP</button>
+        <button type="button" class="citizen-tab" data-tab="vehicles">Véhicules</button>
+        <button type="button" class="citizen-tab" data-tab="records">Casier</button>
+        <button type="button" class="citizen-tab" data-tab="notes">Notes</button>
+      </nav>
+
+      <div class="citizen-tab-panels">
+        <section class="citizen-tab-panel active" data-panel="identity">
+          <div class="form-grid two compact-form">
             <label>Nom<input id="lastName" type="text" /></label>
             <label>Prénom<input id="firstName" type="text" /></label>
             <label>Date de naissance<input id="birthDate" type="date" /></label>
@@ -144,19 +154,17 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
           </div>
         </section>
 
-        <section>
-          <h3>Description physique</h3>
-          <div class="form-grid two">
+        <section class="citizen-tab-panel" data-panel="physical">
+          <div class="form-grid two compact-form">
             <label>Cheveux<input id="hairColor" type="text" /></label>
             <label>Yeux<input id="eyeColor" type="text" /></label>
             <label>Taille en cm<input id="heightCm" type="number" min="1" max="260" /></label>
-            <label class="wide">Particularités<textarea id="physicalDetails" rows="3"></textarea></label>
+            <label class="wide">Particularités<textarea id="physicalDetails" rows="4"></textarea></label>
           </div>
         </section>
 
-        <section>
-          <h3>Informations RP</h3>
-          <div class="form-grid two">
+        <section class="citizen-tab-panel" data-panel="rp">
+          <div class="form-grid two compact-form">
             <label>Appartenance / affiliation<input id="affiliation" type="text" /></label>
             <label>Organisation connue<input id="knownOrganization" type="text" /></label>
             <label>Groupe criminel connu<input id="knownCriminalGroup" type="text" /></label>
@@ -164,28 +172,18 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
           </div>
         </section>
 
-        <section>
-          <h3>Photo & notes</h3>
-          <div class="form-grid two">
-            <label>Photo citoyen<input id="citizenPhotoInput" type="file" accept="image/png,image/jpeg,image/webp" /></label>
-            <label class="wide">Notes internes<textarea id="notes" rows="5"></textarea></label>
-          </div>
-        </section>
-      </div>
-
-      <div class="citizen-subsections">
-        <section class="citizen-subcard">
-          <div class="subcard-header">
+        <section class="citizen-tab-panel" data-panel="vehicles">
+          <div class="subcard-header clean">
             <div>
               <p class="mdt-kicker">Véhicules</p>
               <h3>Véhicules enregistrés</h3>
             </div>
-            <button type="button" id="newVehicleButton" class="mdt-button-secondary">Ajouter véhicule</button>
+            <button type="button" id="newVehicleButton" class="mdt-button-secondary">+ Véhicule</button>
           </div>
-          <div id="vehiclesList" class="record-list"></div>
+          <div id="vehiclesList" class="record-list compact"></div>
           <form id="vehicleForm" class="inline-record-form" hidden>
             <input type="hidden" id="vehicleId" />
-            <div class="form-grid two">
+            <div class="form-grid two compact-form">
               <label>Plaque<input id="vehiclePlate" type="text" /></label>
               <label>Modèle<input id="vehicleModel" type="text" /></label>
               <label>Couleur<input id="vehicleColor" type="text" /></label>
@@ -193,22 +191,22 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
               <label>Statut<select id="vehicleStatus"><option>Actif</option><option>Recherché</option><option>Saisi</option><option>Volé</option><option>Inactif</option></select></label>
               <label class="wide">Notes<textarea id="vehicleNotes" rows="3"></textarea></label>
             </div>
-            <div class="inline-actions"><button type="submit" class="mdt-button">Valider véhicule</button><button type="button" id="cancelVehicleButton" class="mdt-button-secondary">Annuler</button></div>
+            <div class="inline-actions"><button type="submit" class="mdt-button">Valider</button><button type="button" id="cancelVehicleButton" class="mdt-button-secondary">Annuler</button></div>
           </form>
         </section>
 
-        <section class="citizen-subcard">
-          <div class="subcard-header">
+        <section class="citizen-tab-panel" data-panel="records">
+          <div class="subcard-header clean">
             <div>
               <p class="mdt-kicker">Casier judiciaire</p>
               <h3>Infractions enregistrées</h3>
             </div>
-            <button type="button" id="newRecordButton" class="mdt-button-secondary">Ajouter infraction</button>
+            <button type="button" id="newRecordButton" class="mdt-button-secondary">+ Infraction</button>
           </div>
-          <div id="recordsList" class="record-list"></div>
+          <div id="recordsList" class="record-list compact"></div>
           <form id="recordForm" class="inline-record-form" hidden>
             <input type="hidden" id="recordId" />
-            <div class="form-grid two">
+            <div class="form-grid two compact-form">
               <label>Date<input id="offenseDate" type="date" /></label>
               <label>Type d’infraction<input id="offenseType" type="text" /></label>
               <label>Statut<select id="caseStatus"><option>Ouvert</option><option>En enquête</option><option>Classé</option><option>Condamné</option><option>Archivé</option></select></label>
@@ -216,10 +214,18 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
               <label class="wide">Description<textarea id="description" rows="4"></textarea></label>
               <label class="wide">Notes supplémentaires<textarea id="recordNotes" rows="3"></textarea></label>
             </div>
-            <div class="inline-actions"><button type="submit" class="mdt-button">Valider infraction</button><button type="button" id="cancelRecordButton" class="mdt-button-secondary">Annuler</button></div>
+            <div class="inline-actions"><button type="submit" class="mdt-button">Valider</button><button type="button" id="cancelRecordButton" class="mdt-button-secondary">Annuler</button></div>
           </form>
         </section>
+
+        <section class="citizen-tab-panel" data-panel="notes">
+          <div class="form-grid compact-form">
+            <label>Photo citoyen<input id="citizenPhotoInput" type="file" accept="image/png,image/jpeg,image/webp" /></label>
+            <label>Notes internes<textarea id="notes" rows="9"></textarea></label>
+          </div>
+        </section>
       </div>
+
       <p id="citizenMessage" class="form-message"></p>
     </div>
   </template>
@@ -232,6 +238,6 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
       window.location.href = result.redirect || '/index.html';
     });
   </script>
-  <script src="/search.js?v=1"></script>
+  <script src="/search.js?v=2"></script>
 </body>
 </html>

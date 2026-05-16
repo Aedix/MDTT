@@ -39,9 +39,9 @@ if ($title === '' || mb_strlen($title) > 120) {
     exit;
 }
 
-if ($body === '' || mb_strlen($body) > 2000) {
+if ($body === '' || mb_strlen($body) > 10000) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Annonce invalide. Maximum 2000 caracteres.']);
+    echo json_encode(['success' => false, 'message' => 'Annonce invalide. Maximum 10000 caracteres.']);
     exit;
 }
 

@@ -5,7 +5,12 @@ document.head.appendChild(dispatchStylesheet);
 
 let activeAgentTarget = null;
 let lastDashboardHash = '';
+let lastRealtimeVersion = 0;
 let syncInProgress = false;
+let versionCheckInProgress = false;
+let pollingDelay = 3000;
+const minPollingDelay = 3000;
+const maxPollingDelay = 10000;
 
 function setDispatchMessage(message, type = 'error') {
   const dispatchMessage = document.querySelector('#dispatchMessage');
@@ -55,6 +60,10 @@ async function sendDispatchRequest(url, payload) {
 
   if (!response.ok || !result.success) {
     throw new Error(result.message || 'Action dispatch refusée.');
+  }
+
+  if (typeof result.version === 'number') {
+    lastRealtimeVersion = result.version;
   }
 
   return result;
@@ -120,6 +129,9 @@ function applyDashboardState(state, force = false) {
   }
 
   lastDashboardHash = state.hash || '';
+  if (typeof state.version === 'number') {
+    lastRealtimeVersion = state.version;
+  }
 }
 
 async function syncDashboardState(force = false) {
@@ -145,7 +157,48 @@ async function syncDashboardState(force = false) {
   }
 }
 
+async function checkDashboardVersion() {
+  if (document.hidden || versionCheckInProgress || syncInProgress) {
+    window.setTimeout(checkDashboardVersion, pollingDelay);
+    return;
+  }
+
+  versionCheckInProgress = true;
+
+  try {
+    const response = await fetch('/api/dashboard-version.php?t=' + Date.now(), {
+      method: 'GET',
+      credentials: 'same-origin',
+      cache: 'no-store',
+    });
+
+    const result = await response.json();
+
+    if (response.ok && result.success) {
+      const serverVersion = Number(result.version || 0);
+
+      if (serverVersion !== lastRealtimeVersion) {
+        pollingDelay = minPollingDelay;
+        await syncDashboardState(true);
+      } else {
+        pollingDelay = Math.min(maxPollingDelay, pollingDelay + 1000);
+      }
+    }
+  } catch (error) {
+    pollingDelay = Math.min(maxPollingDelay, pollingDelay + 1000);
+  } finally {
+    versionCheckInProgress = false;
+    window.setTimeout(checkDashboardVersion, pollingDelay);
+  }
+}
+
 window.syncDashboardState = syncDashboardState;
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    syncDashboardState(true);
+  }
+});
 
 document.addEventListener('click', async (event) => {
   const createUnitButton = event.target.closest('#createUnitButton');
@@ -271,4 +324,4 @@ document.addEventListener('submit', async (event) => {
 });
 
 syncDashboardState(true);
-window.setInterval(() => syncDashboardState(false), 2000);
+window.setTimeout(checkDashboardVersion, pollingDelay);

@@ -21,7 +21,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   <title>MDT - Recherches</title>
   <link rel="stylesheet" href="/style.css?v=11" />
   <link rel="stylesheet" href="/mdt.css?v=7" />
-  <link rel="stylesheet" href="/search.css?v=3" />
+  <link rel="stylesheet" href="/search.css?v=4" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">
   <div class="mdt-shell">
@@ -114,11 +114,14 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   <template id="citizenPanelTemplate">
     <div class="citizen-panel-inner">
       <div class="citizen-profile-header compact">
-        <button type="button" class="citizen-photo-box citizen-photo-trigger" id="citizenPhotoTrigger" title="Ajouter ou changer la photo">
-          <img id="citizenPhotoPreview" alt="Photo citoyen" hidden />
-          <span id="citizenPhotoFallback">ID</span>
-          <small>Changer photo</small>
-        </button>
+        <div class="citizen-photo-box">
+          <button type="button" class="citizen-photo-trigger" id="citizenPhotoTrigger" title="Ajouter ou changer la photo">
+            <img id="citizenPhotoPreview" alt="Photo citoyen" hidden />
+            <span id="citizenPhotoFallback">ID</span>
+            <small>Changer photo</small>
+          </button>
+          <button type="button" class="citizen-photo-expand" id="citizenPhotoExpand" title="Agrandir la photo" aria-label="Agrandir la photo">⛶</button>
+        </div>
         <input id="citizenPhotoInput" class="citizen-photo-input" type="file" accept="image/png,image/jpeg,image/webp" hidden />
 
         <div class="citizen-profile-main">
@@ -241,6 +244,6 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
       window.location.href = result.redirect || '/index.html';
     });
   </script>
-  <script src="/search.js?v=3"></script>
+  <script src="/search.js?v=4"></script>
 </body>
 </html>

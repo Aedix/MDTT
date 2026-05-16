@@ -21,7 +21,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   <title>MDT - Recherches</title>
   <link rel="stylesheet" href="/style.css?v=11" />
   <link rel="stylesheet" href="/mdt.css?v=7" />
-  <link rel="stylesheet" href="/search.css?v=2" />
+  <link rel="stylesheet" href="/search.css?v=3" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">
   <div class="mdt-shell">
@@ -83,7 +83,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
           </div>
           <div class="search-command-bar">
             <input type="search" id="citizenSearchInput" placeholder="Nom, téléphone, adresse, emploi, affiliation, plaque..." autocomplete="off" />
-            <button type="button" id="refreshCitizensButton" class="mdt-button-secondary">↻</button>
+            <button type="button" id="refreshCitizensButton" class="mdt-button-secondary search-square-action" title="Actualiser">↻</button>
             <button type="button" id="newCitizenButton" class="mdt-button">+ Citoyen</button>
           </div>
         </section>
@@ -114,16 +114,20 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   <template id="citizenPanelTemplate">
     <div class="citizen-panel-inner">
       <div class="citizen-profile-header compact">
-        <div class="citizen-photo-box">
+        <button type="button" class="citizen-photo-box citizen-photo-trigger" id="citizenPhotoTrigger" title="Ajouter ou changer la photo">
           <img id="citizenPhotoPreview" alt="Photo citoyen" hidden />
           <span id="citizenPhotoFallback">ID</span>
-        </div>
+          <small>Changer photo</small>
+        </button>
+        <input id="citizenPhotoInput" class="citizen-photo-input" type="file" accept="image/png,image/jpeg,image/webp" hidden />
+
         <div class="citizen-profile-main">
           <p class="mdt-kicker">Fiche citoyen</p>
           <h2 id="citizenFullName">Nouveau citoyen</h2>
           <p id="citizenMeta" class="search-muted">Non enregistré</p>
           <div class="citizen-quick-tags" id="citizenQuickTags"></div>
         </div>
+
         <div class="citizen-panel-actions">
           <button type="button" id="saveCitizenButton" class="mdt-button">Sauvegarder</button>
           <button type="button" id="resetCitizenButton" class="mdt-button-secondary">Réinitialiser</button>
@@ -220,7 +224,6 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
 
         <section class="citizen-tab-panel" data-panel="notes">
           <div class="form-grid compact-form">
-            <label>Photo citoyen<input id="citizenPhotoInput" type="file" accept="image/png,image/jpeg,image/webp" /></label>
             <label>Notes internes<textarea id="notes" rows="9"></textarea></label>
           </div>
         </section>
@@ -238,6 +241,6 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
       window.location.href = result.redirect || '/index.html';
     });
   </script>
-  <script src="/search.js?v=2"></script>
+  <script src="/search.js?v=3"></script>
 </body>
 </html>

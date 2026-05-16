@@ -9,14 +9,36 @@ const motdBody = document.querySelector('#motdBody');
 const motdEditor = document.querySelector('#motdEditor');
 const toolbarButtons = document.querySelectorAll('.mdt-editor-toolbar button');
 
-const originalTitle = motdTitle?.value || '';
-const originalBody = motdBody?.value || '';
+let originalTitle = motdTitle?.value || '';
+let originalBody = motdBody?.value || '';
 
 function setMotdMessage(message, type = 'error') {
   if (!motdMessage) return;
   motdMessage.textContent = message;
   motdMessage.dataset.type = type;
 }
+
+function isMotdEditing() {
+  return Boolean(motdEditor && !motdEditor.hidden);
+}
+
+function applyMotdState(motd) {
+  if (!motd || isMotdEditing()) return;
+
+  if (motdTitleView) motdTitleView.textContent = motd.title || 'Annonce opérationnelle';
+  if (motdTitle) motdTitle.value = motd.title || '';
+  if (motdBody) motdBody.value = motd.body_raw || '';
+  if (motdView) motdView.innerHTML = motd.body_html || '';
+
+  const timecode = document.querySelector('.mdt-motd-actions .mdt-timecode');
+  if (timecode) timecode.textContent = motd.updated_label || 'Jamais mis à jour';
+
+  originalTitle = motdTitle?.value || '';
+  originalBody = motdBody?.value || '';
+}
+
+window.applyMotdState = applyMotdState;
+window.isMotdEditing = isMotdEditing;
 
 function insertAtSelection(textarea, before, after = '') {
   if (!textarea) return;
@@ -143,12 +165,11 @@ if (motdSaveButton) {
 
       closeMotdEditor();
       setMotdMessage('');
+      motdSaveButton.disabled = false;
 
-      if (motdTitleView) {
-        motdTitleView.textContent = title;
+      if (window.syncDashboardState) {
+        window.syncDashboardState(true);
       }
-
-      window.setTimeout(() => window.location.reload(), 250);
     } catch (error) {
       setMotdMessage('Erreur serveur ou réponse invalide.');
       motdSaveButton.disabled = false;

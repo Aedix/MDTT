@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/realtime.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -34,7 +35,7 @@ if ($serviceCode === '' || $unitId <= 0) {
 $pdo = getDatabaseConnection();
 
 $unitStatement = $pdo->prepare(
-    'SELECT du.id
+    'SELECT du.id, du.service_id
      FROM dispatch_units du
      INNER JOIN services s ON s.id = du.service_id
      WHERE du.id = :unit_id
@@ -43,12 +44,15 @@ $unitStatement = $pdo->prepare(
      LIMIT 1'
 );
 $unitStatement->execute(['unit_id' => $unitId, 'service_code' => $serviceCode]);
+$unit = $unitStatement->fetch();
 
-if (!$unitStatement->fetch()) {
+if (!$unit) {
     http_response_code(404);
     echo json_encode(['success' => false, 'message' => 'Unite introuvable.']);
     exit;
 }
+
+$serviceId = (int) $unit['service_id'];
 
 $pdo->beginTransaction();
 
@@ -60,4 +64,10 @@ $membersStatement->execute(['unit_id' => $unitId]);
 
 $pdo->commit();
 
-echo json_encode(['success' => true, 'message' => 'Unite fermee.']);
+touchRealtimeVersion($pdo, $serviceId);
+
+echo json_encode([
+    'success' => true,
+    'message' => 'Unite fermee.',
+    'version' => getRealtimeVersion($pdo, $serviceId),
+]);

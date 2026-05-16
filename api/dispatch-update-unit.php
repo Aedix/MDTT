@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/realtime.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -158,4 +159,10 @@ foreach ($activeMemberIds as $memberId) {
 
 $pdo->commit();
 
-echo json_encode(['success' => true, 'message' => 'Unite mise a jour.']);
+touchRealtimeVersion($pdo, $serviceId);
+
+echo json_encode([
+    'success' => true,
+    'message' => 'Unite mise a jour.',
+    'version' => getRealtimeVersion($pdo, $serviceId),
+]);

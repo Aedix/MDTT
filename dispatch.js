@@ -3,6 +3,11 @@ dispatchStylesheet.rel = 'stylesheet';
 dispatchStylesheet.href = '/dispatch.css?v=3';
 document.head.appendChild(dispatchStylesheet);
 
+const motdToolsScript = document.createElement('script');
+motdToolsScript.src = '/motd-tools.js?v=1';
+motdToolsScript.defer = true;
+document.head.appendChild(motdToolsScript);
+
 let activeAgentTarget = null;
 let lastDashboardHash = '';
 let lastRealtimeVersion = 0;

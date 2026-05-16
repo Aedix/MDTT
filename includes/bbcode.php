@@ -18,6 +18,26 @@ function escapeMdtContentUrl(string $url): string
     return htmlspecialchars(html_entity_decode($url, ENT_QUOTES, 'UTF-8'), ENT_QUOTES, 'UTF-8');
 }
 
+function normalizeMdtCssColor(string $color): ?string
+{
+    $decoded = trim(html_entity_decode($color, ENT_QUOTES, 'UTF-8'));
+    $decoded = preg_replace('/\s+/', ' ', $decoded) ?? $decoded;
+
+    if (preg_match('/^#[0-9a-fA-F]{3,8}$/', $decoded)) {
+        return $decoded;
+    }
+
+    if (preg_match('/^[a-zA-Z]+$/', $decoded)) {
+        return $decoded;
+    }
+
+    if (preg_match('/^rgba?\(\s*\d{1,3}\s*(?:,|\s)\s*\d{1,3}\s*(?:,|\s)\s*\d{1,3}(?:\s*(?:,|\/)\s*(?:0|1|0?\.\d+))?\s*\)$/i', $decoded)) {
+        return $decoded;
+    }
+
+    return null;
+}
+
 function renderBbCode(string $input): string
 {
     $safe = htmlspecialchars($input, ENT_QUOTES, 'UTF-8');
@@ -40,14 +60,22 @@ function renderBbCode(string $input): string
         $safe = preg_replace($pattern, $replacement, $safe) ?? $safe;
     }
 
-    $safe = preg_replace_callback('/\[color=(#[0-9a-fA-F]{3,6}|[a-zA-Z]+|rgb\([0-9,\s]+\))\](.*?)\[\/color\]/is', static function (array $matches): string {
-        $color = htmlspecialchars($matches[1], ENT_QUOTES, 'UTF-8');
-        return '<span style="color:' . $color . '">' . $matches[2] . '</span>';
+    $safe = preg_replace_callback('/\[color=([^\]\r\n]+)\](.*?)\[\/color\]/is', static function (array $matches): string {
+        $color = normalizeMdtCssColor($matches[1]);
+        if ($color === null) {
+            return $matches[2];
+        }
+
+        return '<span style="color:' . htmlspecialchars($color, ENT_QUOTES, 'UTF-8') . '">' . $matches[2] . '</span>';
     }, $safe) ?? $safe;
 
-    $safe = preg_replace_callback('/\[highlight=(#[0-9a-fA-F]{3,6}|[a-zA-Z]+|rgb\([0-9,\s]+\))\](.*?)\[\/highlight\]/is', static function (array $matches): string {
-        $color = htmlspecialchars($matches[1], ENT_QUOTES, 'UTF-8');
-        return '<span style="background-color:' . $color . '; color:#111827; padding:1px 4px; border-radius:4px;">' . $matches[2] . '</span>';
+    $safe = preg_replace_callback('/\[highlight=([^\]\r\n]+)\](.*?)\[\/highlight\]/is', static function (array $matches): string {
+        $color = normalizeMdtCssColor($matches[1]);
+        if ($color === null) {
+            return $matches[2];
+        }
+
+        return '<span style="background-color:' . htmlspecialchars($color, ENT_QUOTES, 'UTF-8') . '; padding:1px 4px; border-radius:4px;">' . $matches[2] . '</span>';
     }, $safe) ?? $safe;
 
     $safe = preg_replace_callback('/\[font=([a-zA-Z0-9\s,\-]+)\](.*?)\[\/font\]/is', static function (array $matches): string {

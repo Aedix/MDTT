@@ -1,3 +1,8 @@
+const dispatchStylesheet = document.createElement('link');
+dispatchStylesheet.rel = 'stylesheet';
+dispatchStylesheet.href = '/dispatch.css?v=1';
+document.head.appendChild(dispatchStylesheet);
+
 const createUnitButton = document.querySelector('#createUnitButton');
 const createUnitForm = document.querySelector('#createUnitForm');
 const cancelCreateUnitButton = document.querySelector('#cancelCreateUnitButton');

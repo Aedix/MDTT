@@ -62,6 +62,15 @@
     selection.addRange(savedRange);
   }
 
+  function removeStyleFromClone(root) {
+    root.querySelectorAll('span').forEach((span) => {
+      if (!span.getAttribute('style')) return;
+      const replacement = document.createDocumentFragment();
+      while (span.firstChild) replacement.appendChild(span.firstChild);
+      span.replaceWith(replacement);
+    });
+  }
+
   function wrapSelectionWithSpan(styleObject, fallbackText) {
     restoreSelection();
     const selection = window.getSelection();
@@ -75,7 +84,9 @@
     }
 
     const range = selection.getRangeAt(0);
-    span.appendChild(range.extractContents());
+    const extracted = range.extractContents();
+    removeStyleFromClone(extracted);
+    span.appendChild(extracted);
     range.insertNode(span);
     const nextRange = document.createRange();
     nextRange.selectNodeContents(span);
@@ -240,7 +251,7 @@
     label: 'Surlignage',
     value: '#f5c542',
     title: 'Surlignage',
-    onApply: (color) => wrapSelectionWithSpan({ backgroundColor: color, color: '#111827', padding: '1px 4px', borderRadius: '4px' }, 'Texte surligné'),
+    onApply: (color) => wrapSelectionWithSpan({ backgroundColor: color, padding: '1px 4px', borderRadius: '4px' }, 'Texte surligné'),
   });
 
   const fontSelect = document.createElement('select');

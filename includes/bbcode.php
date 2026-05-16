@@ -24,9 +24,19 @@ function renderBbCode(string $input): string
         $safe = preg_replace($pattern, $replacement, $safe) ?? $safe;
     }
 
-    $safe = preg_replace_callback('/\[color=(#[0-9a-fA-F]{3,6}|[a-zA-Z]+)\](.*?)\[\/color\]/is', static function (array $matches): string {
+    $safe = preg_replace_callback('/\[color=(#[0-9a-fA-F]{3,6}|[a-zA-Z]+|rgb\([0-9,\s]+\))\](.*?)\[\/color\]/is', static function (array $matches): string {
         $color = htmlspecialchars($matches[1], ENT_QUOTES, 'UTF-8');
         return '<span style="color:' . $color . '">' . $matches[2] . '</span>';
+    }, $safe) ?? $safe;
+
+    $safe = preg_replace_callback('/\[highlight=(#[0-9a-fA-F]{3,6}|[a-zA-Z]+|rgb\([0-9,\s]+\))\](.*?)\[\/highlight\]/is', static function (array $matches): string {
+        $color = htmlspecialchars($matches[1], ENT_QUOTES, 'UTF-8');
+        return '<span style="background-color:' . $color . '; color:#111827; padding:1px 4px; border-radius:4px;">' . $matches[2] . '</span>';
+    }, $safe) ?? $safe;
+
+    $safe = preg_replace_callback('/\[font=([a-zA-Z0-9\s,\-]+)\](.*?)\[\/font\]/is', static function (array $matches): string {
+        $font = htmlspecialchars($matches[1], ENT_QUOTES, 'UTF-8');
+        return '<span style="font-family:' . $font . '">' . $matches[2] . '</span>';
     }, $safe) ?? $safe;
 
     $safe = preg_replace_callback('/\[url\](https?:\/\/[^\s\[]+)\[\/url\]/i', static function (array $matches): string {

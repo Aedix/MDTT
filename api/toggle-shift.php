@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/realtime.php';
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -34,6 +35,8 @@ if (!$service) {
     exit;
 }
 
+$serviceId = (int) $service['id'];
+
 $activeStatement = $pdo->prepare(
     'SELECT id, started_at
      FROM service_shifts
@@ -45,7 +48,7 @@ $activeStatement = $pdo->prepare(
 );
 $activeStatement->execute([
     'user_id' => (int) $user['id'],
-    'service_id' => (int) $service['id'],
+    'service_id' => $serviceId,
 ]);
 $activeShift = $activeStatement->fetch();
 
@@ -67,7 +70,14 @@ if ($activeShift) {
         'id' => (int) $activeShift['id'],
     ]);
 
-    echo json_encode(['success' => true, 'message' => 'Fin de service enregistrée.', 'is_on_duty' => false]);
+    touchRealtimeVersion($pdo, $serviceId);
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Fin de service enregistrée.',
+        'is_on_duty' => false,
+        'version' => getRealtimeVersion($pdo, $serviceId),
+    ]);
     exit;
 }
 
@@ -77,8 +87,15 @@ $insertStatement = $pdo->prepare(
 );
 $insertStatement->execute([
     'user_id' => (int) $user['id'],
-    'service_id' => (int) $service['id'],
+    'service_id' => $serviceId,
     'status' => 'on_duty',
 ]);
 
-echo json_encode(['success' => true, 'message' => 'Prise de service enregistrée.', 'is_on_duty' => true]);
+touchRealtimeVersion($pdo, $serviceId);
+
+echo json_encode([
+    'success' => true,
+    'message' => 'Prise de service enregistrée.',
+    'is_on_duty' => true,
+    'version' => getRealtimeVersion($pdo, $serviceId),
+]);

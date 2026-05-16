@@ -27,10 +27,10 @@
 .dispatch-edit-row,
 .dispatch-compact-edit-grid {
   display: grid;
-  grid-template-columns: 18px minmax(90px, 0.8fr) minmax(125px, 1fr) minmax(160px, 1.2fr) minmax(70px, 0.55fr) minmax(125px, 0.9fr) minmax(160px, 1fr) 66px;
-  gap: 10px;
+  grid-template-columns: 18px minmax(130px, 1fr) minmax(130px, 1fr) minmax(180px, 1.25fr) minmax(82px, 0.6fr) minmax(140px, 1fr) minmax(200px, 1.35fr) 66px;
+  gap: 12px;
   align-items: center;
-  min-width: 1040px;
+  min-width: 1120px;
 }
 
 .dispatch-list-header {
@@ -41,14 +41,37 @@
   letter-spacing: 1px;
 }
 
+.dispatch-list-header span,
+.dispatch-view-row > span,
+.dispatch-view-row > strong,
+.dispatch-view-row > button,
+.dispatch-edit-row > input,
+.dispatch-edit-row > select,
+.dispatch-edit-row > button,
+.dispatch-compact-edit-grid > input,
+.dispatch-compact-edit-grid > select,
+.dispatch-compact-edit-grid > button {
+  min-width: 0;
+}
+
 .dispatch-view-row,
 .dispatch-edit-row,
 .dispatch-compact-edit-grid {
-  min-height: 42px;
+  min-height: 46px;
   padding: 8px 10px;
   border: 1px solid rgba(154, 168, 189, 0.12);
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.035);
+}
+
+.dispatch-view-row > strong,
+.dispatch-view-row > span,
+.dispatch-agent-summary,
+.dispatch-comment {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
 }
 
 .dispatch-edit-row,
@@ -108,7 +131,6 @@
   font: inherit;
   font-weight: 700;
   text-align: left;
-  white-space: nowrap;
 }
 
 .dispatch-agent-summary:hover {
@@ -136,9 +158,6 @@
 }
 
 .dispatch-comment {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
   color: var(--mdt-text);
 }
 

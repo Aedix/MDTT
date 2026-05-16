@@ -5,6 +5,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/bbcode.php';
+require_once __DIR__ . '/../includes/realtime.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
@@ -215,6 +216,23 @@ if (!$serviceInfo) {
 
 $serviceId = (int) $serviceInfo['service_id'];
 
+$lock = null;
+try {
+    $pdo->prepare('DELETE FROM service_motd_locks WHERE service_id = :service_id AND heartbeat_at < (NOW() - INTERVAL 45 SECOND)')
+        ->execute(['service_id' => $serviceId]);
+    $lockStatement = $pdo->prepare(
+        'SELECT l.user_id, l.heartbeat_at, u.username
+         FROM service_motd_locks l
+         INNER JOIN users u ON u.id = l.user_id
+         WHERE l.service_id = :service_id
+         LIMIT 1'
+    );
+    $lockStatement->execute(['service_id' => $serviceId]);
+    $lock = $lockStatement->fetch() ?: null;
+} catch (Throwable $exception) {
+    $lock = null;
+}
+
 $activeShiftStatement = $pdo->prepare(
     'SELECT id, started_at
      FROM service_shifts
@@ -254,7 +272,7 @@ $unitsStatement = $pdo->prepare(
      LEFT JOIN divisions d ON d.id = du.division_id
      WHERE du.service_id = :service_id
        AND du.is_active = 1
-     ORDER BY du.created_at ASC'
+     ORDER BY du.name ASC, du.created_at ASC'
 );
 $unitsStatement->execute(['service_id' => $serviceId]);
 $dispatchUnits = $unitsStatement->fetchAll();
@@ -292,11 +310,17 @@ $motdBody = (string) ($serviceInfo['motd_body'] ?? 'Aucune annonce active pour l
 $state = [
     'success' => true,
     'current_user_id' => (int) $user['id'],
+    'version' => getRealtimeVersion($pdo, $serviceId),
     'motd' => [
         'title' => $motdTitle,
         'body_raw' => $motdBody,
         'body_html' => renderBbCode($motdBody),
         'updated_label' => updatedLabel($serviceInfo['motd_updated_at'] ?? null, $serviceInfo['motd_updated_by'] ?? null),
+        'lock' => [
+            'is_locked' => (bool) $lock,
+            'is_locked_by_me' => $lock ? ((int) $lock['user_id'] === (int) $user['id']) : false,
+            'username' => $lock ? (string) $lock['username'] : null,
+        ],
     ],
     'shift' => [
         'is_on_duty' => (bool) $activeShift,
@@ -312,6 +336,7 @@ $state['hash'] = sha1(json_encode([
     $state['motd']['title'],
     $state['motd']['body_raw'],
     $state['motd']['updated_label'],
+    $state['motd']['lock'],
     $state['shift'],
     $state['dispatch_html'],
     $state['duty_html'],

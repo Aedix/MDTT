@@ -349,7 +349,11 @@ function bindCitizenPanelEvents() {
     tab.addEventListener('click', () => showTab(tab.dataset.tab));
   });
 
-  document.querySelector('#citizenPhotoInput').addEventListener('change', async (event) => {
+  const photoTrigger = document.querySelector('#citizenPhotoTrigger');
+  const photoInput = document.querySelector('#citizenPhotoInput');
+  photoTrigger?.addEventListener('click', () => photoInput?.click());
+
+  photoInput?.addEventListener('change', async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
     try {

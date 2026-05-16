@@ -49,6 +49,39 @@ function readUnitPayload(container) {
   };
 }
 
+function getUnitNameFromRow(row) {
+  const field = row.querySelector('[name="name"]');
+  if (field) return field.value.trim();
+  return row.querySelector('strong')?.textContent?.trim() || '';
+}
+
+function naturalCompareUnitNames(a, b) {
+  return getUnitNameFromRow(a).localeCompare(getUnitNameFromRow(b), 'fr', {
+    numeric: true,
+    sensitivity: 'base',
+  });
+}
+
+function sortDispatchRows() {
+  const list = document.querySelector('.dispatch-list');
+  if (!list) return;
+
+  const pairs = [...list.querySelectorAll('.dispatch-view-row')].map((viewRow) => {
+    const unitId = viewRow.dataset.unitId;
+    return {
+      viewRow,
+      editRow: list.querySelector(`.dispatch-edit-row[data-unit-id="${unitId}"]`),
+    };
+  });
+
+  pairs.sort((a, b) => naturalCompareUnitNames(a.viewRow, b.viewRow));
+
+  pairs.forEach(({ viewRow, editRow }) => {
+    list.appendChild(viewRow);
+    if (editRow) list.appendChild(editRow);
+  });
+}
+
 async function sendDispatchRequest(url, payload) {
   const response = await fetch(url, {
     method: 'POST',
@@ -128,6 +161,7 @@ function applyDashboardState(state, force = false) {
 
     if (dispatchList && typeof state.dispatch_html === 'string') {
       dispatchList.innerHTML = state.dispatch_html;
+      sortDispatchRows();
     }
 
     if (dutyList && typeof state.duty_html === 'string') {
@@ -137,6 +171,8 @@ function applyDashboardState(state, force = false) {
     if (drawerAgents && typeof state.drawer_agents_html === 'string') {
       drawerAgents.innerHTML = state.drawer_agents_html;
     }
+  } else {
+    hasPendingDashboardSync = true;
   }
 
   lastDashboardHash = state.hash || '';
@@ -241,6 +277,7 @@ document.addEventListener('click', async (event) => {
     setDispatchMessage('');
     await syncDashboardState(true);
     await flushPendingDashboardSync();
+    sortDispatchRows();
     return;
   }
 
@@ -295,6 +332,7 @@ document.addEventListener('click', async (event) => {
     if (viewRow) viewRow.hidden = false;
     await syncDashboardState(true);
     await flushPendingDashboardSync();
+    sortDispatchRows();
     return;
   }
 
@@ -343,6 +381,7 @@ document.addEventListener('submit', async (event) => {
     }
 
     await syncDashboardState(true);
+    sortDispatchRows();
     setDispatchMessage('');
   } catch (error) {
     setDispatchMessage(error.message);
@@ -350,4 +389,5 @@ document.addEventListener('submit', async (event) => {
 });
 
 syncDashboardState(true);
+sortDispatchRows();
 window.setTimeout(checkDashboardVersion, pollingDelay);

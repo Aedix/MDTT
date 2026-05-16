@@ -1,6 +1,6 @@
 const dispatchStylesheet = document.createElement('link');
 dispatchStylesheet.rel = 'stylesheet';
-dispatchStylesheet.href = '/dispatch.css?v=2';
+dispatchStylesheet.href = '/dispatch.css?v=3';
 document.head.appendChild(dispatchStylesheet);
 
 let activeAgentTarget = null;
@@ -8,6 +8,7 @@ let lastDashboardHash = '';
 let lastRealtimeVersion = 0;
 let syncInProgress = false;
 let versionCheckInProgress = false;
+let hasPendingDashboardSync = false;
 let pollingDelay = 3000;
 const minPollingDelay = 3000;
 const maxPollingDelay = 10000;
@@ -79,6 +80,10 @@ function isDispatchBusy() {
   );
 }
 
+function isDashboardLockedForEditing() {
+  return Boolean(isDispatchBusy() || (window.isMotdEditing && window.isMotdEditing()));
+}
+
 function openDrawer(target) {
   activeAgentTarget = target;
   const selectedMembers = new Set(getSelectedMembersFromTarget(target));
@@ -96,6 +101,12 @@ function closeDrawer() {
   const dispatchDrawer = document.querySelector('#dispatchDrawer');
   if (dispatchDrawer) dispatchDrawer.hidden = true;
   activeAgentTarget = null;
+}
+
+async function flushPendingDashboardSync() {
+  if (!hasPendingDashboardSync || isDashboardLockedForEditing()) return;
+  hasPendingDashboardSync = false;
+  await syncDashboardState(true);
 }
 
 function applyDashboardState(state, force = false) {
@@ -178,8 +189,15 @@ async function checkDashboardVersion() {
       const serverVersion = Number(result.version || 0);
 
       if (serverVersion !== lastRealtimeVersion) {
+        lastRealtimeVersion = serverVersion;
         pollingDelay = minPollingDelay;
-        await syncDashboardState(true);
+
+        if (isDashboardLockedForEditing()) {
+          hasPendingDashboardSync = true;
+        } else {
+          hasPendingDashboardSync = false;
+          await syncDashboardState(true);
+        }
       } else {
         pollingDelay = Math.min(maxPollingDelay, pollingDelay + 1000);
       }
@@ -196,7 +214,11 @@ window.syncDashboardState = syncDashboardState;
 
 document.addEventListener('visibilitychange', () => {
   if (!document.hidden) {
-    syncDashboardState(true);
+    if (isDashboardLockedForEditing()) {
+      hasPendingDashboardSync = true;
+    } else {
+      syncDashboardState(true);
+    }
   }
 });
 
@@ -218,6 +240,7 @@ document.addEventListener('click', async (event) => {
     if (createButton) createButton.hidden = false;
     setDispatchMessage('');
     await syncDashboardState(true);
+    await flushPendingDashboardSync();
     return;
   }
 
@@ -231,12 +254,14 @@ document.addEventListener('click', async (event) => {
 
   if (event.target.closest('#dispatchDrawerClose')) {
     closeDrawer();
+    await flushPendingDashboardSync();
     return;
   }
 
   const drawer = document.querySelector('#dispatchDrawer');
   if (drawer && event.target === drawer) {
     closeDrawer();
+    await flushPendingDashboardSync();
     return;
   }
 
@@ -269,6 +294,7 @@ document.addEventListener('click', async (event) => {
     editRow.hidden = true;
     if (viewRow) viewRow.hidden = false;
     await syncDashboardState(true);
+    await flushPendingDashboardSync();
     return;
   }
 

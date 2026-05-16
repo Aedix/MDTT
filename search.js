@@ -4,11 +4,15 @@ const citizenPanelTemplate = document.querySelector('#citizenPanelTemplate');
 const citizenSearchInput = document.querySelector('#citizenSearchInput');
 const newCitizenButton = document.querySelector('#newCitizenButton');
 const refreshCitizensButton = document.querySelector('#refreshCitizensButton');
+const citizenCount = document.querySelector('#citizenCount');
 
 let citizens = [];
 let selectedCitizenId = null;
 let selectedCitizenData = null;
 let searchDebounce = null;
+let lastVehicles = [];
+let lastRecords = [];
+let lastCanDelete = false;
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -55,10 +59,13 @@ async function loadCitizens() {
     renderCitizens();
   } catch (error) {
     citizensList.innerHTML = `<p class="search-empty">${escapeHtml(error.message)}</p>`;
+    if (citizenCount) citizenCount.textContent = '0';
   }
 }
 
 function renderCitizens() {
+  if (citizenCount) citizenCount.textContent = String(citizens.length);
+
   if (!citizens.length) {
     citizensList.innerHTML = '<p class="search-empty">Aucun citoyen trouvé.</p>';
     return;
@@ -66,13 +73,13 @@ function renderCitizens() {
 
   citizensList.innerHTML = citizens.map((citizen) => {
     const fullName = `${citizen.last_name || ''} ${citizen.first_name || ''}`.trim();
-    const meta = [citizen.phone, citizen.address, citizen.job, citizen.affiliation].filter(Boolean).join(' · ') || 'Aucune information rapide';
+    const meta = [citizen.phone, citizen.job, citizen.affiliation].filter(Boolean).join(' · ') || citizen.address || 'Aucune information rapide';
     const photo = citizen.photo_path ? `<img src="${escapeHtml(citizen.photo_path)}" alt="${escapeHtml(fullName)}">` : 'ID';
     return `
       <button type="button" class="citizen-row ${Number(citizen.id) === selectedCitizenId ? 'active' : ''}" data-id="${Number(citizen.id)}">
         <span class="citizen-row-photo">${photo}</span>
         <span class="citizen-row-main"><strong>${escapeHtml(fullName)}</strong><span>${escapeHtml(meta)}</span></span>
-        <span class="citizen-row-badges"><span class="search-mini-badge">${Number(citizen.vehicles_count || 0)} veh.</span><span class="search-mini-badge">${Number(citizen.records_count || 0)} casier</span></span>
+        <span class="citizen-row-badges"><span class="search-mini-badge">${Number(citizen.vehicles_count || 0)}V</span><span class="search-mini-badge">${Number(citizen.records_count || 0)}C</span></span>
       </button>
     `;
   }).join('');
@@ -93,6 +100,28 @@ function getInput(id) {
   return document.querySelector(`#${id}`)?.value.trim() || '';
 }
 
+function showTab(tabName) {
+  document.querySelectorAll('.citizen-tab').forEach((tab) => {
+    tab.classList.toggle('active', tab.dataset.tab === tabName);
+  });
+  document.querySelectorAll('.citizen-tab-panel').forEach((panel) => {
+    panel.classList.toggle('active', panel.dataset.panel === tabName);
+  });
+}
+
+function updateQuickTags(citizen = null) {
+  const container = document.querySelector('#citizenQuickTags');
+  if (!container) return;
+  const tags = [
+    getInput('phone') || citizen?.phone,
+    getInput('job') || citizen?.job,
+    getInput('affiliation') || citizen?.affiliation,
+    getInput('specialStatus') || citizen?.special_status,
+  ].filter(Boolean).slice(0, 4);
+
+  container.innerHTML = tags.map((tag) => `<span>${escapeHtml(tag)}</span>`).join('');
+}
+
 function updateCitizenHeader(citizen = null) {
   const firstName = getInput('firstName') || citizen?.first_name || '';
   const lastName = getInput('lastName') || citizen?.last_name || '';
@@ -100,12 +129,15 @@ function updateCitizenHeader(citizen = null) {
   const meta = [getInput('birthDate') || citizen?.birth_date, getInput('phone') || citizen?.phone, getInput('job') || citizen?.job].filter(Boolean).join(' · ') || 'Fiche non enregistrée';
   document.querySelector('#citizenFullName').textContent = fullName;
   document.querySelector('#citizenMeta').textContent = meta;
+  updateQuickTags(citizen);
 }
 
 function fillCitizen(citizen) {
   mountCitizenPanel();
   selectedCitizenId = Number(citizen?.id || 0) || null;
   selectedCitizenData = citizen || null;
+  lastVehicles = [];
+  lastRecords = [];
 
   setInput('citizenId', citizen?.id || '');
   setInput('lastName', citizen?.last_name || '');
@@ -137,14 +169,18 @@ function fillCitizen(citizen) {
   renderVehicles([]);
   renderRecords([]);
   renderCitizens();
+  showTab('identity');
 }
 
 async function loadCitizen(id) {
   try {
     const result = await apiGet(`/api/citizens.php?action=get&id=${encodeURIComponent(id)}`);
     fillCitizen(result.citizen);
-    renderVehicles(result.vehicles || [], result.can_delete);
-    renderRecords(result.records || [], result.can_delete);
+    lastVehicles = result.vehicles || [];
+    lastRecords = result.records || [];
+    lastCanDelete = Boolean(result.can_delete);
+    renderVehicles(lastVehicles, lastCanDelete);
+    renderRecords(lastRecords, lastCanDelete);
   } catch (error) {
     alert(error.message);
   }
@@ -233,6 +269,7 @@ function renderRecords(records, canDelete = false) {
 }
 
 function fillVehicleForm(vehicle = {}) {
+  showTab('vehicles');
   document.querySelector('#vehicleForm').hidden = false;
   setInput('vehicleId', vehicle.id || '');
   setInput('vehiclePlate', vehicle.plate || '');
@@ -244,6 +281,7 @@ function fillVehicleForm(vehicle = {}) {
 }
 
 function fillRecordForm(record = {}) {
+  showTab('records');
   document.querySelector('#recordForm').hidden = false;
   setInput('recordId', record.id || '');
   setInput('offenseDate', record.offense_date || '');
@@ -272,6 +310,7 @@ async function saveVehicle(event) {
     });
     setMessage('Véhicule sauvegardé.', 'success');
     await loadCitizen(citizenId);
+    showTab('vehicles');
   } catch (error) {
     setMessage(error.message);
   }
@@ -295,6 +334,7 @@ async function saveRecord(event) {
     });
     setMessage('Infraction sauvegardée.', 'success');
     await loadCitizen(citizenId);
+    showTab('records');
   } catch (error) {
     setMessage(error.message);
   }
@@ -303,7 +343,11 @@ async function saveRecord(event) {
 function bindCitizenPanelEvents() {
   document.querySelector('#saveCitizenButton').addEventListener('click', saveCitizen);
   document.querySelector('#resetCitizenButton').addEventListener('click', () => selectedCitizenId ? loadCitizen(selectedCitizenId) : fillCitizen(null));
-  document.querySelectorAll('#lastName,#firstName,#birthDate,#phone,#job').forEach((field) => field.addEventListener('input', () => updateCitizenHeader(selectedCitizenData)));
+  document.querySelectorAll('#lastName,#firstName,#birthDate,#phone,#job,#affiliation,#specialStatus').forEach((field) => field.addEventListener('input', () => updateCitizenHeader(selectedCitizenData)));
+
+  document.querySelectorAll('.citizen-tab').forEach((tab) => {
+    tab.addEventListener('click', () => showTab(tab.dataset.tab));
+  });
 
   document.querySelector('#citizenPhotoInput').addEventListener('change', async (event) => {
     const file = event.target.files?.[0];
@@ -353,12 +397,14 @@ citizenPanel.addEventListener('click', async (event) => {
     if (!confirm('Supprimer ce véhicule ?')) return;
     await apiPost('/api/citizens.php?action=delete_vehicle', { id: JSON.parse(vehicleItem.dataset.vehicle).id });
     await loadCitizen(selectedCitizenId);
+    showTab('vehicles');
   }
 
   if (event.target.closest('.delete-record') && recordItem) {
     if (!confirm('Supprimer cette infraction ?')) return;
     await apiPost('/api/citizens.php?action=delete_record', { id: JSON.parse(recordItem.dataset.record).id });
     await loadCitizen(selectedCitizenId);
+    showTab('records');
   }
 });
 

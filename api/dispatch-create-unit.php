@@ -25,6 +25,7 @@ if (!is_array($data)) {
 $serviceCode = (string) ($user['active_service_code'] ?? $user['service'] ?? '');
 $name = trim((string) ($data['name'] ?? ''));
 $status = trim((string) ($data['status'] ?? 'Disponible'));
+$comment = trim((string) ($data['comment'] ?? ''));
 $divisionId = (int) ($data['division_id'] ?? 0);
 $ppaLevel = trim((string) ($data['ppa_level'] ?? 'PPA I'));
 $memberIds = $data['member_ids'] ?? [];
@@ -42,6 +43,19 @@ if ($name === '' || mb_strlen($name) > 80) {
 }
 
 if ($status === '' || mb_strlen($status) > 80) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Statut invalide.']);
+    exit;
+}
+
+if (mb_strlen($comment) > 160) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'Commentaire trop long.']);
+    exit;
+}
+
+$allowedStatuses = ['Disponible', 'Non affecté', 'Patrouille', 'Intervention', 'Pause', 'Transport', 'En attente', 'Indisponible'];
+if (!in_array($status, $allowedStatuses, true)) {
     http_response_code(400);
     echo json_encode(['success' => false, 'message' => 'Statut invalide.']);
     exit;
@@ -111,14 +125,15 @@ if (empty($activeMemberIds)) {
 $pdo->beginTransaction();
 
 $unitStatement = $pdo->prepare(
-    'INSERT INTO dispatch_units (service_id, division_id, name, status, ppa_level, created_by)
-     VALUES (:service_id, :division_id, :name, :status, :ppa_level, :created_by)'
+    'INSERT INTO dispatch_units (service_id, division_id, name, status, comment, ppa_level, created_by)
+     VALUES (:service_id, :division_id, :name, :status, :comment, :ppa_level, :created_by)'
 );
 $unitStatement->execute([
     'service_id' => $serviceId,
     'division_id' => $divisionId,
     'name' => $name,
     'status' => $status,
+    'comment' => $comment !== '' ? $comment : null,
     'ppa_level' => $ppaLevel,
     'created_by' => (int) $user['id'],
 ]);

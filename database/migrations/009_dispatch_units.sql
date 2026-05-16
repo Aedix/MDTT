@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS dispatch_units (
   division_id INT NULL,
   name VARCHAR(80) NOT NULL,
   status VARCHAR(80) NOT NULL DEFAULT 'Disponible',
+  comment VARCHAR(160) NULL,
   ppa_level VARCHAR(20) NOT NULL DEFAULT 'PPA I',
   created_by INT NULL,
   is_active TINYINT(1) NOT NULL DEFAULT 1,

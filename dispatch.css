@@ -97,7 +97,26 @@
 .status-unavailable { background: #6b7280; box-shadow: 0 0 12px rgba(107, 114, 128, 0.35); }
 .status-unassigned { background: #64748b; box-shadow: 0 0 12px rgba(100, 116, 139, 0.25); }
 
-.dispatch-agent-summary,
+.dispatch-agent-summary {
+  min-height: auto;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  color: var(--mdt-text);
+  background: transparent;
+  cursor: help;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.dispatch-agent-summary:hover {
+  color: #ffffff;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .dispatch-agent-button {
   min-height: 30px;
   padding: 6px 9px;
@@ -111,7 +130,6 @@
   white-space: nowrap;
 }
 
-.dispatch-agent-summary:hover,
 .dispatch-agent-button:hover {
   border-color: rgba(47, 128, 237, 0.4);
   background: rgba(47, 128, 237, 0.14);
@@ -121,7 +139,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--mdt-muted);
+  color: var(--mdt-text);
 }
 
 .dispatch-row-actions.compact {

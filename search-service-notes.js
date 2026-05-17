@@ -1,4 +1,16 @@
 (() => {
+  function activateReportsNavLink() {
+    document.querySelectorAll('.mdt-nav-link').forEach((link) => {
+      const label = (link.textContent || '').trim().toLowerCase();
+      if (!label.startsWith('rapports')) return;
+      link.href = '/reports.php';
+      link.classList.remove('disabled');
+      link.querySelector('.mdt-placeholder')?.remove();
+    });
+  }
+
+  activateReportsNavLink();
+
   async function parseResponse(response) {
     const text = await response.text();
     let result;

@@ -12,7 +12,6 @@ let selectedCitizenData = null;
 let searchDebounce = null;
 let lastCanDelete = false;
 let isEditing = true;
-let pendingCrop = null;
 
 function escapeHtml(value) {
   return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
@@ -59,6 +58,7 @@ function getInput(id) {
 
 function displayValue(value) { return value ? escapeHtml(value) : '<span class="empty-value">Non renseigné</span>'; }
 function displayCheck(value) { return value ? '<span class="license-pill ok">Oui</span>' : '<span class="license-pill no">Non</span>'; }
+function healthLabel(value) { return value === 'deceased' ? 'Décédé' : 'En vie'; }
 
 async function loadCitizens() {
   const q = encodeURIComponent(citizenSearchInput?.value.trim() || '');
@@ -81,7 +81,7 @@ function renderCitizens() {
     const meta = [citizen.phone, citizen.job, citizen.affiliation].filter(Boolean).join(' · ') || citizen.address || 'Aucune information rapide';
     const photo = citizen.photo_path ? `<img src="${escapeHtml(citizen.photo_path)}" alt="${escapeHtml(fullName)}">` : 'ID';
     const health = citizen.health_status === 'deceased' ? 'deceased' : 'alive';
-    return `<button type="button" class="citizen-row ${Number(citizen.id) === selectedCitizenId ? 'active' : ''}" data-id="${Number(citizen.id)}"><span class="health-dot ${health}" title="${health === 'deceased' ? 'Décédé' : 'Vivant'}"></span><span class="citizen-row-photo">${photo}</span><span class="citizen-row-main"><strong>${escapeHtml(fullName)}</strong><span>${escapeHtml(meta)}</span></span><span class="citizen-row-badges"><span class="search-mini-badge">${Number(citizen.vehicles_count || 0)}V</span><span class="search-mini-badge">${Number(citizen.records_count || 0)}C</span></span></button>`;
+    return `<button type="button" class="citizen-row ${Number(citizen.id) === selectedCitizenId ? 'active' : ''}" data-id="${Number(citizen.id)}"><span class="health-dot ${health}" title="${healthLabel(health)}"></span><span class="citizen-row-photo">${photo}</span><span class="citizen-row-main"><strong>${escapeHtml(fullName)}</strong><span>${escapeHtml(meta)}</span></span><span class="citizen-row-badges"><span class="search-mini-badge">${Number(citizen.vehicles_count || 0)}V</span><span class="search-mini-badge">${Number(citizen.records_count || 0)}C</span></span></button>`;
   }).join('');
 }
 
@@ -94,6 +94,16 @@ function mountCitizenPanel() {
 function showTab(tabName) {
   document.querySelectorAll('.citizen-tab').forEach((tab) => tab.classList.toggle('active', tab.dataset.tab === tabName));
   document.querySelectorAll('.citizen-tab-panel').forEach((panel) => panel.classList.toggle('active', panel.dataset.panel === tabName));
+}
+
+function setTabBadge(tabName, count) {
+  const tab = document.querySelector(`.citizen-tab[data-tab="${tabName}"]`);
+  if (!tab) return;
+  tab.querySelector('.tab-count')?.remove();
+  const badge = document.createElement('span');
+  badge.className = 'tab-count';
+  badge.textContent = String(count || 0);
+  tab.appendChild(badge);
 }
 
 function updateQuickTags(citizen = null) {
@@ -147,7 +157,6 @@ function fillCitizen(citizen) {
   mountCitizenPanel();
   selectedCitizenId = Number(citizen?.id || 0) || null;
   selectedCitizenData = citizen || null;
-
   setInput('citizenId', citizen?.id || '');
   setInput('lastName', citizen?.last_name || '');
   setInput('firstName', citizen?.first_name || '');
@@ -168,16 +177,16 @@ function fillCitizen(citizen) {
   setInput('healthStatus', citizen?.health_status || 'alive');
   setInput('hasDriverLicense', citizen?.has_driver_license || 0);
   setInput('hasWeaponLicense', citizen?.has_weapon_license || 0);
-
   const photoPreview = document.querySelector('#citizenPhotoPreview');
   const fallback = document.querySelector('#citizenPhotoFallback');
   if (citizen?.photo_path) { photoPreview.src = citizen.photo_path; photoPreview.hidden = false; fallback.hidden = true; }
   document.querySelector('#citizenHealthDot')?.remove();
   const healthDot = document.createElement('span');
+  const health = citizen?.health_status === 'deceased' ? 'deceased' : 'alive';
   healthDot.id = 'citizenHealthDot';
-  healthDot.className = `health-dot large ${(citizen?.health_status === 'deceased') ? 'deceased' : 'alive'}`;
+  healthDot.className = `health-dot large ${health}`;
+  healthDot.title = healthLabel(health);
   document.querySelector('.citizen-profile-main').prepend(healthDot);
-
   updateCitizenHeader(citizen);
   renderReadOnlyPanels(citizen || {});
   renderVehicles([]);
@@ -194,6 +203,8 @@ async function loadCitizen(id) {
     lastCanDelete = Boolean(result.can_delete);
     renderVehicles(result.vehicles || [], lastCanDelete);
     renderRecords(result.records || [], lastCanDelete);
+    setTabBadge('vehicles', (result.vehicles || []).length);
+    setTabBadge('records', (result.records || []).length);
   } catch (error) { alert(error.message); }
 }
 
@@ -222,6 +233,29 @@ async function uploadPhoto(file, endpoint) {
   if (!response.ok || !result.success) throw new Error(result.message || 'Upload impossible. Limite: 4 Mo. Formats: png, jpg, jpeg, webp.');
   return result.path;
 }
+
+function ensurePhotoModal() {
+  let modal = document.querySelector('#citizenPhotoModal');
+  if (modal) return modal;
+  modal = document.createElement('div');
+  modal.id = 'citizenPhotoModal';
+  modal.className = 'citizen-photo-modal';
+  modal.hidden = true;
+  modal.innerHTML = `<div class="citizen-photo-modal-card"><button type="button" class="citizen-photo-modal-close" aria-label="Fermer">×</button><img id="citizenPhotoModalImage" alt="Image agrandie"></div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', (event) => { if (event.target === modal || event.target.closest('.citizen-photo-modal-close')) modal.hidden = true; });
+  document.addEventListener('keydown', (event) => { if (event.key === 'Escape') modal.hidden = true; });
+  return modal;
+}
+
+function openImageModal(path) {
+  if (!path) { setMessage('Aucune image à agrandir.', 'info'); return; }
+  const modal = ensurePhotoModal();
+  modal.querySelector('#citizenPhotoModalImage').src = path;
+  modal.hidden = false;
+}
+
+function openPhotoModal() { openImageModal(getInput('citizenPhotoPath')); }
 
 function openCropper(file, type, callback) {
   const image = new Image();
@@ -253,7 +287,7 @@ function openCropper(file, type, callback) {
 function renderVehicles(vehicles, canDelete = false) {
   const container = document.querySelector('#vehiclesList'); if (!container) return;
   if (!vehicles.length) { container.innerHTML = '<p class="search-empty">Aucun véhicule enregistré.</p>'; return; }
-  container.innerHTML = vehicles.map((v) => `<div class="record-item vehicle-item" data-vehicle='${escapeHtml(JSON.stringify(v))}'>${v.photo_path ? `<img class="vehicle-thumb" src="${escapeHtml(v.photo_path)}" alt="${escapeHtml(v.model || 'Véhicule')}">` : '<span class="vehicle-thumb empty">VH</span>'}<div><strong>${escapeHtml(v.model || 'Modèle inconnu')}</strong><p>${escapeHtml([v.category, v.color, v.plate, v.registration_status].filter(Boolean).join(' · '))}</p>${v.notes ? `<p>${escapeHtml(v.notes)}</p>` : ''}</div><div class="record-actions"><button type="button" class="search-icon-button edit-vehicle">✎</button>${canDelete ? '<button type="button" class="search-icon-button delete delete-vehicle">×</button>' : ''}</div></div>`).join('');
+  container.innerHTML = vehicles.map((v) => `<div class="record-item vehicle-item" data-vehicle='${escapeHtml(JSON.stringify(v))}'>${v.photo_path ? `<button type="button" class="vehicle-thumb vehicle-image-button" data-image="${escapeHtml(v.photo_path)}"><img src="${escapeHtml(v.photo_path)}" alt="${escapeHtml(v.model || 'Véhicule')}"></button>` : '<span class="vehicle-thumb empty">VH</span>'}<div><strong>${escapeHtml(v.model || 'Modèle inconnu')}</strong><p>${escapeHtml([v.category, v.color, v.plate, v.registration_status].filter(Boolean).join(' · '))}</p>${v.notes ? `<p>${escapeHtml(v.notes)}</p>` : ''}</div><div class="record-actions"><button type="button" class="search-icon-button edit-vehicle">✎</button>${canDelete ? '<button type="button" class="search-icon-button delete delete-vehicle">×</button>' : ''}</div></div>`).join('');
 }
 
 function renderRecords(records, canDelete = false) {
@@ -262,7 +296,7 @@ function renderRecords(records, canDelete = false) {
   container.innerHTML = records.map((r) => `<div class="record-item" data-record='${escapeHtml(JSON.stringify(r))}'><div><strong>${escapeHtml(r.offense_type)}</strong><p>${escapeHtml([r.offense_date, r.case_status, r.sanction].filter(Boolean).join(' · '))}</p>${r.description ? `<p>${escapeHtml(r.description)}</p>` : ''}</div><div class="record-actions"><button type="button" class="search-icon-button edit-record">✎</button>${canDelete ? '<button type="button" class="search-icon-button delete delete-record">×</button>' : ''}</div></div>`).join('');
 }
 
-function fillVehicleForm(v = {}) { showTab('vehicles'); document.querySelector('#vehicleForm').hidden = false; setInput('vehicleId', v.id || ''); setInput('vehicleModel', v.model || ''); setInput('vehicleCategory', v.category || ''); setInput('vehicleColor', v.color || ''); setInput('vehiclePlate', v.plate || ''); setInput('vehicleStatus', v.registration_status || 'Actif'); setInput('vehiclePhotoPath', v.photo_path || ''); setInput('vehicleNotes', v.notes || ''); }
+function fillVehicleForm(v = {}) { showTab('vehicles'); document.querySelector('#vehicleForm').hidden = false; setInput('vehicleId', v.id || ''); setInput('vehicleModel', v.model || ''); setInput('vehicleCategory', v.category || ''); setInput('vehicleColor', v.color || ''); setInput('vehiclePlate', v.plate || ''); setInput('vehicleStatus', v.registration_status || 'Actif'); setInput('vehiclePhotoPath', v.photo_path || ''); setInput('vehicleNotes', v.notes || ''); document.querySelector('#vehiclePhotoButton').innerHTML = v.photo_path ? `Photo ajoutée<br><small>${escapeHtml(String(v.photo_path).split('/').pop())}</small>` : 'Photo véhicule<br><small>png/jpg/webp · max 4 Mo</small>'; }
 function fillRecordForm(r = {}) { showTab('records'); document.querySelector('#recordForm').hidden = false; setInput('recordId', r.id || ''); setInput('offenseDate', r.offense_date || ''); setInput('offenseType', r.offense_type || ''); setInput('caseStatus', r.case_status || 'Ouvert'); setInput('sanction', r.sanction || ''); setInput('description', r.description || ''); setInput('recordNotes', r.notes || ''); }
 
 async function saveVehicle(event) { event.preventDefault(); const citizenId = Number(getInput('citizenId')); if (!citizenId) return setMessage('Sauvegarde d’abord la fiche citoyen.'); try { await apiPost('/api/citizens.php?action=save_vehicle', { id: Number(getInput('vehicleId') || 0), citizen_id: citizenId, model: getInput('vehicleModel'), category: getInput('vehicleCategory'), color: getInput('vehicleColor'), plate: getInput('vehiclePlate'), registration_status: getInput('vehicleStatus'), photo_path: getInput('vehiclePhotoPath'), notes: getInput('vehicleNotes') }); setMessage('Véhicule sauvegardé.', 'success'); await loadCitizen(citizenId); showTab('vehicles'); } catch (error) { setMessage(error.message); } }
@@ -291,6 +325,8 @@ function bindCitizenPanelEvents() {
 citizensList.addEventListener('click', (event) => { const row = event.target.closest('.citizen-row'); if (row) loadCitizen(Number(row.dataset.id)); });
 citizenPanel.addEventListener('click', async (event) => {
   const vehicleItem = event.target.closest('[data-vehicle]'); const recordItem = event.target.closest('[data-record]');
+  const vehicleImage = event.target.closest('.vehicle-image-button');
+  if (vehicleImage) openImageModal(vehicleImage.dataset.image);
   if (event.target.closest('.edit-vehicle') && vehicleItem) fillVehicleForm(JSON.parse(vehicleItem.dataset.vehicle));
   if (event.target.closest('.edit-record') && recordItem) fillRecordForm(JSON.parse(recordItem.dataset.record));
   if (event.target.closest('.delete-vehicle') && vehicleItem) { if (!confirm('Supprimer ce véhicule ?')) return; await apiPost('/api/citizens.php?action=delete_vehicle', { id: JSON.parse(vehicleItem.dataset.vehicle).id }); await loadCitizen(selectedCitizenId); showTab('vehicles'); }

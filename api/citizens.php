@@ -95,30 +95,30 @@ function getCitizen(PDO $pdo, int $id): ?array
 try {
     if ($method === 'GET' && $action === 'list') {
         $query = trim((string) ($_GET['q'] ?? ''));
-        $search = '%' . $query . '%';
         $select = 'SELECT c.id, c.first_name, c.last_name, c.birth_date, c.phone, c.address, c.job, c.affiliation, c.photo_path, c.health_status,
                     (SELECT COUNT(*) FROM citizen_vehicles vcount WHERE vcount.citizen_id = c.id) AS vehicles_count,
                     (SELECT COUNT(*) FROM criminal_records rcount WHERE rcount.citizen_id = c.id) AS records_count
                    FROM citizens c';
 
         if ($query !== '') {
+            $search = '%' . $query . '%';
             $statement = $pdo->prepare(
                 $select . '
-                 WHERE c.first_name LIKE :search
-                    OR c.last_name LIKE :search
-                    OR c.phone LIKE :search
-                    OR c.address LIKE :search
-                    OR c.job LIKE :search
-                    OR c.affiliation LIKE :search
-                    OR c.known_organization LIKE :search
-                    OR c.known_criminal_group LIKE :search
-                    OR c.special_status LIKE :search
-                    OR c.notes LIKE :search
-                    OR EXISTS (SELECT 1 FROM citizen_vehicles v WHERE v.citizen_id = c.id AND (v.plate LIKE :search OR v.model LIKE :search OR v.category LIKE :search OR v.color LIKE :search))
+                 WHERE c.first_name LIKE ?
+                    OR c.last_name LIKE ?
+                    OR c.phone LIKE ?
+                    OR c.address LIKE ?
+                    OR c.job LIKE ?
+                    OR c.affiliation LIKE ?
+                    OR c.known_organization LIKE ?
+                    OR c.known_criminal_group LIKE ?
+                    OR c.special_status LIKE ?
+                    OR c.notes LIKE ?
+                    OR EXISTS (SELECT 1 FROM citizen_vehicles v WHERE v.citizen_id = c.id AND (v.plate LIKE ? OR v.model LIKE ? OR v.category LIKE ? OR v.color LIKE ?))
                  ORDER BY c.last_name ASC, c.first_name ASC
                  LIMIT 80'
             );
-            $statement->execute(['search' => $search]);
+            $statement->execute(array_fill(0, 14, $search));
         } else {
             $statement = $pdo->query($select . ' ORDER BY c.updated_at DESC LIMIT 80');
         }

@@ -7,6 +7,10 @@ require_once __DIR__ . '/includes/permissions.php';
 
 $user = requireAuthenticatedUser();
 $canOpenPanel = canOpenManagementPanel($user);
+$userTechnicalRole = str_replace(['-', ' '], '_', strtolower(trim((string) ($user['role'] ?? ''))));
+$canRemoveReports = strtolower(trim((string) ($user['username'] ?? ''))) === 'admin'
+    || in_array($userTechnicalRole, ['super_admin', 'superadmin'], true)
+    || userHasPermission($user, '*');
 
 $activeServiceCode = (string) ($user['active_service_code'] ?? $user['service'] ?? 'MDT');
 $activeServiceName = (string) ($user['active_service_name'] ?? $activeServiceCode);
@@ -71,7 +75,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
     <div class="report-panel-inner" data-editing="1">
       <header class="report-document-header">
         <div><p class="mdt-kicker" id="reportNumberView">Nouveau rapport</p><h2 id="reportTitleView">Nouveau rapport</h2><p class="report-meta" id="reportMetaView">Non enregistré</p></div>
-        <div class="report-actions"><button type="button" id="editReportButton" class="search-icon-button edit" hidden title="Modifier">✎</button><button type="button" id="previewReportButton" class="mdt-button-secondary">Aperçu</button><button type="button" id="downloadReportButton" class="mdt-button-secondary">Ouvrir export PDF</button><button type="button" id="saveReportButton" class="mdt-button">Sauvegarder</button><button type="button" id="cancelReportButton" class="mdt-button-secondary">Annuler</button></div>
+        <div class="report-actions"><button type="button" id="editReportButton" class="search-icon-button edit" hidden title="Modifier">✎</button><button type="button" id="previewReportButton" class="mdt-button-secondary">Aperçu</button><button type="button" id="downloadReportButton" class="mdt-button-secondary">Ouvrir export PDF</button><button type="button" id="saveReportButton" class="mdt-button">Sauvegarder</button><button type="button" id="cancelReportButton" class="mdt-button-secondary">Annuler</button><?php if ($canRemoveReports): ?><button type="button" id="removeReportButton" class="mdt-button-danger report-delete-button" hidden>Supprimer</button><?php endif; ?></div>
       </header>
       <input type="hidden" id="reportId" />
       <input type="hidden" id="reportStatus" value="submitted" />
@@ -115,10 +119,47 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   </template>
 
   <script>document.querySelector('#logoutButton').addEventListener('click',async()=>{const response=await fetch('/api/logout.php',{method:'POST',credentials:'same-origin'});const result=await response.json();window.location.href=result.redirect||'/index.html';});</script>
+  <script>
+    window.MDT_CAN_REMOVE_REPORTS = <?= $canRemoveReports ? 'true' : 'false' ?>;
+    document.addEventListener('click', async (event) => {
+      const button = event.target.closest('#removeReportButton');
+      if (!button) return;
+
+      const reportId = Number(document.querySelector('#reportId')?.value || 0);
+      if (!reportId || !window.MDT_CAN_REMOVE_REPORTS) return;
+
+      const title = document.querySelector('#reportTitleView')?.textContent?.trim() || 'ce rapport';
+      if (!confirm(`Supprimer définitivement ${title} ?`)) return;
+
+      try {
+        const response = await fetch('/api/report-remove.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'same-origin',
+          body: JSON.stringify({ id: reportId }),
+        });
+        const result = await response.json();
+        if (!response.ok || !result.success) throw new Error(result.message || 'Suppression refusée.');
+
+        selectedReportId = null;
+        reportPanel.innerHTML = '<div class="report-empty-state"><p class="mdt-kicker">Rapport</p><h3>Rapport supprimé</h3><p>Sélectionne ou crée un autre rapport.</p></div>';
+        await loadReports();
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+
+    const deleteButtonObserver = new MutationObserver(() => {
+      const button = document.querySelector('#removeReportButton');
+      if (!button) return;
+      const reportId = Number(document.querySelector('#reportId')?.value || 0);
+      button.hidden = !(window.MDT_CAN_REMOVE_REPORTS && reportId > 0);
+    });
+    deleteButtonObserver.observe(document.body, { childList: true, subtree: true });
+  </script>
   <script src="/reports.js?v=6"></script>
   <script src="/reports-runtime-fixes.js?v=2"></script>
   <script src="/reports-status-editor.js?v=1"></script>
-  <script src="/reports-superadmin-remove.js?v=1"></script>
   <script src="/reports-export-preview.js?v=1"></script>
 </body>
 </html>

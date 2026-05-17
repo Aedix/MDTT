@@ -21,7 +21,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   <title>MDT - Recherches</title>
   <link rel="stylesheet" href="/style.css?v=11" />
   <link rel="stylesheet" href="/mdt.css?v=7" />
-  <link rel="stylesheet" href="/search.css?v=5" />
+  <link rel="stylesheet" href="/search.css?v=6" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">
   <div class="mdt-shell">
@@ -41,7 +41,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
 
       <main class="mdt-content search-page">
         <section class="search-command-card"><div class="search-command-title"><p class="mdt-kicker">Base civile</p><h2>Citoyens</h2></div><div class="search-command-bar"><input type="search" id="citizenSearchInput" placeholder="Nom, téléphone, adresse, emploi, affiliation, plaque..." autocomplete="off" /><button type="button" id="newCitizenButton" class="mdt-button">+ Citoyen</button></div></section>
-        <section class="search-layout"><aside class="mdt-card search-list-card"><div class="search-list-header"><span>Résultats</span><div class="search-list-tools"><small id="citizenCount">—</small><button type="button" id="refreshCitizensButton" class="mdt-button-secondary search-square-action" title="Actualiser">↻</button></div></div><div id="citizensList" class="citizens-list"><p class="search-empty">Chargement des citoyens...</p></div></aside><article class="mdt-card citizen-panel" id="citizenPanel"><div class="citizen-empty-state"><p class="mdt-kicker">Fiche citoyen</p><h3>Sélectionne un citoyen</h3><p>La fiche complète, les véhicules et le casier judiciaire apparaîtront ici.</p></div></article></section>
+        <section class="search-layout"><aside class="mdt-card search-list-card"><div class="search-list-header"><span>Résultats</span><div class="search-list-tools"><small id="citizenCount">—</small><button type="button" id="refreshCitizensButton" class="search-refresh-button" title="Actualiser">↻</button></div></div><div id="citizensList" class="citizens-list"><p class="search-empty">Chargement des citoyens...</p></div></aside><article class="mdt-card citizen-panel" id="citizenPanel"><div class="citizen-empty-state"><p class="mdt-kicker">Fiche citoyen</p><h3>Sélectionne un citoyen</h3><p>La fiche complète, les véhicules et le casier judiciaire apparaîtront ici.</p></div></article></section>
       </main>
     </div>
   </div>
@@ -70,6 +70,6 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
     </div>
   </template>
   <script>const logoutButton=document.querySelector('#logoutButton');logoutButton.addEventListener('click',async()=>{const response=await fetch('/api/logout.php',{method:'POST',credentials:'same-origin'});const result=await response.json();window.location.href=result.redirect||'/index.html';});</script>
-  <script src="/search.js?v=5"></script>
+  <script src="/search.js?v=6"></script>
 </body>
 </html>

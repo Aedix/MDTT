@@ -1,5 +1,5 @@
 (() => {
-  let canRemoveReports = false;
+  let canRemoveReports = Boolean(window.MDT_CAN_REMOVE_REPORTS);
 
   async function apiJson(url, options = {}) {
     const response = await fetch(url, { credentials: 'same-origin', cache: 'no-store', ...options });
@@ -13,29 +13,20 @@
   async function loadCapability() {
     try {
       const result = await apiJson('/api/report-remove.php');
-      canRemoveReports = Boolean(result.can_remove_reports);
-      refreshRemoveButton();
+      canRemoveReports = Boolean(result.can_remove_reports || window.MDT_CAN_REMOVE_REPORTS);
     } catch {
-      canRemoveReports = false;
+      canRemoveReports = Boolean(window.MDT_CAN_REMOVE_REPORTS);
     }
+    refreshRemoveButton();
   }
 
   function selectedReportIdValue() {
     return Number(document.querySelector('#reportId')?.value || 0);
   }
 
-  function ensureRemoveButton() {
-    const actions = document.querySelector('.report-actions');
-    if (!actions || document.querySelector('#removeReportButton')) return;
-
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.id = 'removeReportButton';
-    button.className = 'search-icon-button delete';
-    button.title = 'Supprimer le rapport';
-    button.textContent = '×';
-    button.hidden = true;
-    actions.appendChild(button);
+  function bindRemoveButton(button) {
+    if (!button || button.dataset.bound === '1') return;
+    button.dataset.bound = '1';
 
     button.addEventListener('click', async () => {
       const reportId = selectedReportIdValue();
@@ -60,9 +51,27 @@
     });
   }
 
+  function ensureRemoveButton() {
+    const actions = document.querySelector('.report-actions');
+    if (!actions) return null;
+
+    let button = document.querySelector('#removeReportButton');
+    if (!button) {
+      button = document.createElement('button');
+      button.type = 'button';
+      button.id = 'removeReportButton';
+      button.className = 'mdt-button-danger report-delete-button';
+      button.title = 'Supprimer le rapport';
+      button.textContent = 'Supprimer';
+      actions.appendChild(button);
+    }
+
+    bindRemoveButton(button);
+    return button;
+  }
+
   function refreshRemoveButton() {
-    ensureRemoveButton();
-    const button = document.querySelector('#removeReportButton');
+    const button = ensureRemoveButton();
     if (!button) return;
     button.hidden = !(canRemoveReports && selectedReportIdValue() > 0);
   }

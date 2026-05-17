@@ -12,16 +12,23 @@
       .replace(/^-|-$/g, '');
   }
 
-  function getServiceLogo(report) {
-    const serviceCode = report.service_code || window.currentReportServiceCode || activeServiceCode?.() || 'MDT';
-    const storedLogo = report.service_logo_path || window.currentReportServiceLogo || '';
-
-    if (storedLogo) return storedLogo;
-    if (report.id || report.report_number) return `/assets/services/${String(serviceCode).toLowerCase()}_logo.png`;
-    return activeServiceLogo?.() || `/assets/services/${String(serviceCode).toLowerCase()}_logo.png`;
+  function ownerServiceCode(report) {
+    return report.service_code || currentReportServiceCode || activeServiceCode?.() || 'MDT';
   }
 
-  window.formatDateParts = function formatDatePartsFixed(value) {
+  function ownerServiceName(report) {
+    return report.service_name || currentReportServiceName || ownerServiceCode(report);
+  }
+
+  function ownerServiceLogo(report) {
+    const code = ownerServiceCode(report);
+    const storedLogo = report.service_logo_path || currentReportServiceLogo || '';
+    if (storedLogo) return storedLogo;
+    if (report.id || report.report_number) return `/assets/services/${String(code).toLowerCase()}_logo.png`;
+    return activeServiceLogo?.() || `/assets/services/${String(code).toLowerCase()}_logo.png`;
+  }
+
+  function fixedDateParts(value) {
     if (!value) return { date: 'xx.xx.2026', time: '00:00', weekday: 'Non renseigné' };
     const normalized = String(value).replace(' ', 'T');
     const date = new Date(normalized);
@@ -32,7 +39,9 @@
       time: date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
       weekday: weekday.charAt(0).toUpperCase() + weekday.slice(1),
     };
-  };
+  }
+
+  window.formatDateParts = fixedDateParts;
 
   window.renderReports = function renderReportsFixed() {
     reportCount.textContent = String(reports.length);
@@ -57,12 +66,12 @@
   window.renderDocument = function renderDocumentFixed(report) {
     const type = labelFor(reportMeta.types, report.type_code);
     const status = labelFor(reportMeta.statuses, report.status || 'submitted');
-    const date = window.formatDateParts(report.occurred_at);
+    const date = fixedDateParts(report.occurred_at);
     const officers = linkedNames(linkedAgents) || 'Non renseigné';
-    const serviceCode = report.service_code || window.currentReportServiceCode || activeServiceCode?.() || 'MDT';
-    const serviceName = report.service_name || window.currentReportServiceName || activeServiceName?.() || serviceCode;
-    const logo = getServiceLogo(report);
-    const signature = report.created_by_username || window.currentReportCreatedBy || '';
+    const serviceCode = ownerServiceCode(report);
+    const serviceName = ownerServiceName(report);
+    const logo = ownerServiceLogo(report);
+    const signature = report.created_by_username || currentReportCreatedBy || '';
 
     get('reportNumberView').textContent = report.report_number || 'Nouveau rapport';
     get('reportTitleView').textContent = report.title || 'Nouveau rapport';

@@ -89,13 +89,13 @@ try {
             'statuses' => [
                 ['code' => 'draft', 'label' => 'Brouillon'],
                 ['code' => 'submitted', 'label' => 'Soumis'],
-                ['code' => 'pending_validation', 'label' => 'En attente de validation'],
                 ['code' => 'validated', 'label' => 'Validé'],
                 ['code' => 'archived', 'label' => 'Archivé'],
                 ['code' => 'rejected', 'label' => 'Rejeté'],
             ],
             'access_scopes' => [
-                ['code' => 'service', 'label' => 'Service entier'],
+                ['code' => 'service', 'label' => 'Service actif uniquement'],
+                ['code' => 'interservice', 'label' => 'Interservice'],
                 ['code' => 'division', 'label' => 'Division'],
                 ['code' => 'supervisors', 'label' => 'Supervisor minimum'],
                 ['code' => 'directors', 'label' => 'Director uniquement'],
@@ -108,11 +108,11 @@ try {
         $q = trim((string) ($_GET['q'] ?? ''));
         $search = '%' . $q . '%';
         $statement = $pdo->prepare(
-            'SELECT r.id, r.report_number, r.title, r.type_code, r.status, r.service_code, r.access_scope, r.minimum_power_level, r.occurred_at, r.created_at, u.username AS created_by_username
+            'SELECT r.id, r.report_number, r.title, r.type_code, r.status, r.service_code, r.access_scope, r.occurred_at, r.location, r.created_at, u.username AS created_by_username
              FROM reports r
              LEFT JOIN users u ON u.id = r.created_by
-             WHERE r.service_code = :service_code
-               AND (:q = "" OR r.report_number LIKE :search OR r.title LIKE :search OR r.summary LIKE :search OR r.facts LIKE :search)
+             WHERE (r.service_code = :service_code OR r.access_scope = "interservice")
+               AND (:q = "" OR r.report_number LIKE :search OR r.title LIKE :search OR r.summary LIKE :search OR r.facts LIKE :search OR r.location LIKE :search)
              ORDER BY r.updated_at DESC
              LIMIT 120'
         );
@@ -151,6 +151,27 @@ try {
         ]);
     }
 
+    if ($method === 'GET' && $action === 'lookup') {
+        $target = (string) ($_GET['target'] ?? 'citizens');
+        $q = trim((string) ($_GET['q'] ?? ''));
+        $search = '%' . $q . '%';
+
+        if (mb_strlen($q) < 2) respond(['success' => true, 'items' => []]);
+
+        if ($target === 'citizens') {
+            $statement = $pdo->prepare('SELECT id, CONCAT(last_name, " ", first_name) AS label, phone AS meta FROM citizens WHERE last_name LIKE ? OR first_name LIKE ? OR phone LIKE ? ORDER BY last_name ASC, first_name ASC LIMIT 12');
+            $statement->execute([$search, $search, $search]);
+        } elseif ($target === 'vehicles') {
+            $statement = $pdo->prepare('SELECT id, CONCAT(COALESCE(model, "Véhicule"), " · ", plate) AS label, CONCAT(COALESCE(category, ""), " ", COALESCE(color, "")) AS meta FROM citizen_vehicles WHERE model LIKE ? OR plate LIKE ? OR category LIKE ? OR color LIKE ? ORDER BY model ASC, plate ASC LIMIT 12');
+            $statement->execute([$search, $search, $search, $search]);
+        } else {
+            $statement = $pdo->prepare('SELECT id, username AS label, rank_name AS meta FROM users WHERE username LIKE ? OR rank_name LIKE ? ORDER BY username ASC LIMIT 12');
+            $statement->execute([$search, $search]);
+        }
+
+        respond(['success' => true, 'items' => $statement->fetchAll()]);
+    }
+
     if ($method === 'POST' && $action === 'save') {
         $data = body();
         $id = (int) ($data['id'] ?? 0);
@@ -158,16 +179,25 @@ try {
         $title = t($data, 'title', 180);
         if (!$title) respond(['success' => false, 'message' => 'Titre obligatoire.'], 400);
 
+        $allowedScopes = ['service', 'interservice', 'division', 'supervisors', 'directors', 'explicit'];
+        $accessScope = t($data, 'access_scope', 40) ?? 'service';
+        if (!in_array($accessScope, $allowedScopes, true)) $accessScope = 'service';
+
+        $allowedStatuses = ['draft', 'submitted', 'validated', 'archived', 'rejected'];
+        $status = t($data, 'status', 40) ?? 'submitted';
+        if (!in_array($status, $allowedStatuses, true)) $status = 'submitted';
+
         $payload = [
             'title' => $title,
             'type_code' => $type,
-            'status' => t($data, 'status', 40) ?? 'draft',
+            'status' => $status,
             'service_code' => $serviceCode,
             'division_id' => ((int) ($data['division_id'] ?? 0)) ?: null,
-            'access_scope' => t($data, 'access_scope', 40) ?? 'service',
-            'minimum_role_code' => t($data, 'minimum_role_code', 60),
-            'minimum_power_level' => (int) ($data['minimum_power_level'] ?? 0),
+            'access_scope' => $accessScope,
+            'minimum_role_code' => null,
+            'minimum_power_level' => 0,
             'occurred_at' => t($data, 'occurred_at', 40),
+            'location' => t($data, 'location', 180),
             'summary' => t($data, 'summary', 6000),
             'facts' => t($data, 'facts', 12000),
             'actions_taken' => t($data, 'actions_taken', 8000),
@@ -181,13 +211,13 @@ try {
             if (!$existing) respond(['success' => false, 'message' => 'Rapport introuvable.'], 404);
             if (!canUserAccessReport($user, $existing, $pdo)) respond(['success' => false, 'message' => 'Accès refusé.'], 403);
             $payload['id'] = $id;
-            $statement = $pdo->prepare('UPDATE reports SET title = :title, type_code = :type_code, status = :status, service_code = :service_code, division_id = :division_id, access_scope = :access_scope, minimum_role_code = :minimum_role_code, minimum_power_level = :minimum_power_level, occurred_at = :occurred_at, summary = :summary, facts = :facts, actions_taken = :actions_taken, conclusions = :conclusions, notes = :notes, updated_by = :updated_by WHERE id = :id');
+            $statement = $pdo->prepare('UPDATE reports SET title = :title, type_code = :type_code, status = :status, service_code = :service_code, division_id = :division_id, access_scope = :access_scope, minimum_role_code = :minimum_role_code, minimum_power_level = :minimum_power_level, occurred_at = :occurred_at, location = :location, summary = :summary, facts = :facts, actions_taken = :actions_taken, conclusions = :conclusions, notes = :notes, updated_by = :updated_by WHERE id = :id');
             $statement->execute($payload);
             reportLog($pdo, $id, 'update', $payload, (int) $user['id']);
         } else {
             $payload['report_number'] = generateReportNumber($pdo, $serviceCode, $type);
             $payload['created_by'] = (int) $user['id'];
-            $statement = $pdo->prepare('INSERT INTO reports (report_number, title, type_code, status, service_code, division_id, access_scope, minimum_role_code, minimum_power_level, occurred_at, summary, facts, actions_taken, conclusions, notes, created_by, updated_by) VALUES (:report_number, :title, :type_code, :status, :service_code, :division_id, :access_scope, :minimum_role_code, :minimum_power_level, :occurred_at, :summary, :facts, :actions_taken, :conclusions, :notes, :created_by, :updated_by)');
+            $statement = $pdo->prepare('INSERT INTO reports (report_number, title, type_code, status, service_code, division_id, access_scope, minimum_role_code, minimum_power_level, occurred_at, location, summary, facts, actions_taken, conclusions, notes, created_by, updated_by) VALUES (:report_number, :title, :type_code, :status, :service_code, :division_id, :access_scope, :minimum_role_code, :minimum_power_level, :occurred_at, :location, :summary, :facts, :actions_taken, :conclusions, :notes, :created_by, :updated_by)');
             $statement->execute($payload);
             $id = (int) $pdo->lastInsertId();
             reportLog($pdo, $id, 'create', $payload, (int) $user['id']);

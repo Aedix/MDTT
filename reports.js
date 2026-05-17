@@ -42,6 +42,14 @@ function ids(value) { return String(value || '').split(',').map(v => Number(v.tr
 function setMsg(message, type = 'error') { const box = get('reportMessage'); if (box) { box.textContent = message; box.dataset.type = type; } }
 function labelFor(items, code) { return items.find(item => String(item.code) === String(code))?.label || code || 'Non défini'; }
 
+function activeServiceLogo() {
+  return document.querySelector('.mdt-brand-logo img')?.getAttribute('src') || '';
+}
+
+function activeServiceCode() {
+  return document.querySelector('.mdt-brand-title')?.textContent?.trim() || 'MDT';
+}
+
 function fillSelect(id, items, placeholder = null) {
   const select = get(id);
   if (!select) return;
@@ -56,7 +64,7 @@ async function loadReports() {
   const q = encodeURIComponent(reportSearchInput.value.trim());
   reportsList.innerHTML = '<p class="reports-empty">Chargement...</p>';
   try {
-    const result = await apiGet(`/api/reports.php?action=list&q=${q}`);
+    const result = await apiGet(`/api/report-list-simple.php?q=${q}`);
     reports = result.reports || [];
     renderReports();
   } catch (error) {
@@ -106,28 +114,24 @@ function formatDateParts(value) {
   const date = new Date(String(value).replace(' ', 'T'));
   if (Number.isNaN(date.getTime())) return { date: value, time: '00:00 - 00:00', weekday: 'Non renseigné' };
   const weekday = date.toLocaleDateString('fr-FR', { weekday: 'long' });
-  return {
-    date: date.toLocaleDateString('fr-FR'),
-    time: `${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} - 00:00`,
-    weekday: weekday.charAt(0).toUpperCase() + weekday.slice(1)
-  };
+  return { date: date.toLocaleDateString('fr-FR'), time: `${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} - 00:00`, weekday: weekday.charAt(0).toUpperCase() + weekday.slice(1) };
 }
 
-function linkedNames(items) {
-  return items.length ? items.map(item => item.label || `#${item.id}`).join(', ') : '';
-}
+function linkedNames(items) { return items.length ? items.map(item => item.label || `#${item.id}`).join(', ') : ''; }
 
 function renderDocument(report) {
   const type = labelFor(reportMeta.types, report.type_code);
   const status = labelFor(reportMeta.statuses, report.status || 'submitted');
   const date = formatDateParts(report.occurred_at);
   const officers = linkedNames(linkedAgents) || 'Non renseigné';
+  const logo = report.service_logo_path || activeServiceLogo();
+  const serviceCode = report.service_code || activeServiceCode();
   get('reportNumberView').textContent = report.report_number || 'Nouveau rapport';
   get('reportTitleView').textContent = report.title || 'Nouveau rapport';
   get('reportMetaView').textContent = `${type} · ${status}`;
   get('reportDocumentView').innerHTML = `
-    <div class="fib-report-template">
-      <div class="fib-template-header"><div><em>Federal Investigation Bureau</em><strong>RAPPORT</strong></div><div class="fib-template-logo">FIB</div></div>
+    <div class="fib-report-template" id="reportPdfSource">
+      <div class="fib-template-header"><div><em>Federal Investigation Bureau</em><strong>RAPPORT</strong></div><div class="fib-template-logo">${logo ? `<img src="${esc(logo)}" alt="${esc(serviceCode)}">` : esc(serviceCode)}</div></div>
       <div class="fib-template-grid three"><div><span>DATE DE L’INCIDENT</span><strong>${esc(date.date)}</strong></div><div><span>HEURE DE L’INCIDENT</span><strong>${esc(date.time)}</strong></div><div><span>JOUR DE LA SEMAINE</span><strong>${esc(date.weekday)}</strong></div></div>
       <div class="fib-template-row"><span>AGENT INTERVENANT</span><strong>${esc(officers)}</strong></div>
       <div class="fib-template-block"><span>RÉCIT</span><p>${esc(report.facts || 'Non renseigné')}</p></div>
@@ -160,9 +164,7 @@ function renderLinks(data) {
   setLinked('agents', linkedAgents);
 }
 
-function renderLogs(logs = []) {
-  get('reportLogsView').innerHTML = logs.length ? logs.map(log => `<div class="report-log"><strong>${esc(log.action)}</strong><br><span>${esc(log.created_at)} · ${esc(log.username || 'Système')}</span></div>`).join('') : '<p class="reports-empty">Aucun historique.</p>';
-}
+function renderLogs(logs = []) { get('reportLogsView').innerHTML = logs.length ? logs.map(log => `<div class="report-log"><strong>${esc(log.action)}</strong><br><span>${esc(log.created_at)} · ${esc(log.username || 'Système')}</span></div>`).join('') : '<p class="reports-empty">Aucun historique.</p>'; }
 
 function fillReport(report = null, extra = {}) {
   mountReportPanel();
@@ -187,77 +189,30 @@ function fillReport(report = null, extra = {}) {
   renderReports();
 }
 
-async function loadReport(id) {
-  try {
-    const result = await apiGet(`/api/reports.php?action=get&id=${encodeURIComponent(id)}`);
-    fillReport(result.report, result);
-  } catch (error) { alert(error.message); }
-}
+async function loadReport(id) { try { const result = await apiGet(`/api/reports.php?action=get&id=${encodeURIComponent(id)}`); fillReport(result.report, result); } catch (error) { alert(error.message); } }
 
 function payload() {
-  return {
-    id: Number(val('reportId') || 0),
-    title: val('reportTitle'),
-    type_code: val('reportType'),
-    status: val('reportStatus') || 'submitted',
-    occurred_at: val('reportOccurredAt') ? val('reportOccurredAt').replace('T', ' ') + ':00' : '',
-    location: val('reportLocation'),
-    access_scope: val('reportAccessScope'),
-    division_id: Number(val('reportDivision') || 0),
-    summary: val('reportFacts').slice(0, 500),
-    facts: val('reportFacts'),
-    actions_taken: val('reportActionsTaken'),
-    conclusions: val('reportConclusions'),
-    notes: val('reportNotes'),
-    citizen_ids: ids(val('reportCitizenIds')),
-    vehicle_ids: ids(val('reportVehicleIds')),
-    agent_ids: ids(val('reportAgentIds')),
-  };
+  return { id: Number(val('reportId') || 0), title: val('reportTitle'), type_code: val('reportType'), status: val('reportStatus') || 'submitted', occurred_at: val('reportOccurredAt') ? val('reportOccurredAt').replace('T', ' ') + ':00' : '', location: val('reportLocation'), access_scope: val('reportAccessScope'), division_id: Number(val('reportDivision') || 0), summary: val('reportFacts').slice(0, 500), facts: val('reportFacts'), actions_taken: val('reportActionsTaken'), conclusions: val('reportConclusions'), notes: val('reportNotes'), citizen_ids: ids(val('reportCitizenIds')), vehicle_ids: ids(val('reportVehicleIds')), agent_ids: ids(val('reportAgentIds')) };
 }
 
-async function saveReport() {
-  setMsg('Sauvegarde du rapport...', 'info');
-  try {
-    const result = await apiPost('/api/reports.php?action=save', payload());
-    setMsg('Rapport sauvegardé.', 'success');
-    await loadReports();
-    await loadReport(result.id);
-  } catch (error) { setMsg(error.message); }
-}
-
-async function lookup(kind, query) {
-  const target = kind === 'citizens' ? 'citizens' : kind === 'vehicles' ? 'vehicles' : 'agents';
-  if (query.trim().length < 2) return [];
-  const result = await apiGet(`/api/reports.php?action=lookup&target=${target}&q=${encodeURIComponent(query.trim())}`);
-  return result.items || [];
-}
+async function saveReport() { setMsg('Sauvegarde du rapport...', 'info'); try { const result = await apiPost('/api/reports.php?action=save', payload()); setMsg('Rapport sauvegardé.', 'success'); await loadReports(); await loadReport(result.id); } catch (error) { setMsg(error.message); } }
+async function lookup(kind, query) { const target = kind === 'citizens' ? 'citizens' : kind === 'vehicles' ? 'vehicles' : 'agents'; if (query.trim().length < 2) return []; const result = await apiGet(`/api/reports.php?action=lookup&target=${target}&q=${encodeURIComponent(query.trim())}`); return result.items || []; }
 
 function bindLookup(inputId, resultsId, kind) {
   let timer = null;
   const input = get(inputId);
   const results = get(resultsId);
-  input.addEventListener('input', () => {
-    clearTimeout(timer);
-    timer = setTimeout(async () => {
-      try {
-        const items = await lookup(kind, input.value);
-        results.innerHTML = items.map(item => `<button type="button" class="lookup-item" data-kind="${kind}" data-id="${Number(item.id)}" data-label="${esc(item.label)}" data-meta="${esc(item.meta || '')}"><strong>${esc(item.label)}</strong><span>${esc(item.meta || '')}</span></button>`).join('') || '<p>Aucun résultat.</p>';
-      } catch (error) { results.innerHTML = `<p>${esc(error.message)}</p>`; }
-    }, 250);
-  });
+  input.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(async () => { try { const items = await lookup(kind, input.value); results.innerHTML = items.map(item => `<button type="button" class="lookup-item" data-kind="${kind}" data-id="${Number(item.id)}" data-label="${esc(item.label)}" data-meta="${esc(item.meta || '')}"><strong>${esc(item.label)}</strong><span>${esc(item.meta || '')}</span></button>`).join('') || '<p>Aucun résultat.</p>'; } catch (error) { results.innerHTML = `<p>${esc(error.message)}</p>`; } }, 250); });
 }
 
-function addLinked(kind, item) {
-  const list = kind === 'citizens' ? linkedCitizens : kind === 'vehicles' ? linkedVehicles : linkedAgents;
-  if (!list.some(existing => Number(existing.id) === Number(item.id))) list.push(item);
-  setLinked(kind, list);
-}
+function addLinked(kind, item) { const list = kind === 'citizens' ? linkedCitizens : kind === 'vehicles' ? linkedVehicles : linkedAgents; if (!list.some(existing => Number(existing.id) === Number(item.id))) list.push(item); setLinked(kind, list); }
 
-function openPreviewWindow() {
-  const win = window.open('', '_blank');
-  if (!win) return;
-  win.document.write(`<html><head><title>Rapport</title><link rel="stylesheet" href="/reports.css?v=2"></head><body class="report-export-body">${get('reportDocumentView').innerHTML}</body></html>`);
-  win.document.close();
+function downloadReportPdf() {
+  renderDocument(payload());
+  const source = get('reportPdfSource');
+  if (!source || typeof html2pdf === 'undefined') { window.print(); return; }
+  const filename = `${(val('reportTitle') || 'rapport').replace(/[^a-z0-9_-]+/gi, '_')}.pdf`;
+  html2pdf().set({ margin: 0, filename, image: { type: 'jpeg', quality: 0.98 }, html2canvas: { scale: 2, useCORS: true }, jsPDF: { unit: 'pt', format: 'a4', orientation: 'portrait' } }).from(source).save();
 }
 
 function bindReportPanel() {
@@ -266,36 +221,16 @@ function bindReportPanel() {
   get('editReportButton').addEventListener('click', () => setEditMode(true));
   get('cancelReportButton').addEventListener('click', () => selectedReportId ? loadReport(selectedReportId) : (reportPanel.innerHTML = '<div class="report-empty-state"><p class="mdt-kicker">Rapport</p><h3>Sélectionne ou crée un rapport</h3><p>Le rapport s’affichera ici.</p></div>'));
   get('previewReportButton').addEventListener('click', () => { renderDocument(payload()); setEditMode(false); showTab('main'); });
-  get('downloadReportButton').addEventListener('click', openPreviewWindow);
+  get('downloadReportButton').addEventListener('click', downloadReportPdf);
   bindLookup('citizenLookupInput', 'citizenLookupResults', 'citizens');
   bindLookup('vehicleLookupInput', 'vehicleLookupResults', 'vehicles');
   bindLookup('agentLookupInput', 'agentLookupResults', 'agents');
-  ['reportTitle','reportType','reportOccurredAt','reportLocation','reportAccessScope','reportFacts','reportActionsTaken','reportConclusions','reportNotes'].forEach(id => {
-    get(id)?.addEventListener('input', () => renderDocument(payload()));
-    get(id)?.addEventListener('change', () => renderDocument(payload()));
-  });
+  ['reportTitle','reportType','reportOccurredAt','reportLocation','reportAccessScope','reportFacts','reportActionsTaken','reportConclusions','reportNotes'].forEach(id => { get(id)?.addEventListener('input', () => renderDocument(payload())); get(id)?.addEventListener('change', () => renderDocument(payload())); });
 }
 
-reportPanel.addEventListener('click', (event) => {
-  const item = event.target.closest('.lookup-item');
-  if (item) {
-    addLinked(item.dataset.kind, { id: Number(item.dataset.id), label: item.dataset.label, meta: item.dataset.meta });
-    item.closest('.lookup-results').innerHTML = '';
-  }
-  const chip = event.target.closest('.selected-chip');
-  if (chip) {
-    const kind = chip.dataset.kind;
-    const id = Number(chip.dataset.id);
-    const list = kind === 'citizens' ? linkedCitizens : kind === 'vehicles' ? linkedVehicles : linkedAgents;
-    setLinked(kind, list.filter(item => Number(item.id) !== id));
-  }
-});
-
+reportPanel.addEventListener('click', (event) => { const item = event.target.closest('.lookup-item'); if (item) { addLinked(item.dataset.kind, { id: Number(item.dataset.id), label: item.dataset.label, meta: item.dataset.meta }); item.closest('.lookup-results').innerHTML = ''; } const chip = event.target.closest('.selected-chip'); if (chip) { const kind = chip.dataset.kind; const id = Number(chip.dataset.id); const list = kind === 'citizens' ? linkedCitizens : kind === 'vehicles' ? linkedVehicles : linkedAgents; setLinked(kind, list.filter(item => Number(item.id) !== id)); } });
 reportsList.addEventListener('click', event => { const row = event.target.closest('.report-row'); if (row) loadReport(Number(row.dataset.id)); });
 newReportButton.addEventListener('click', () => fillReport(null));
 reportSearchInput.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(loadReports, 250); });
 
-(async () => {
-  try { await loadMeta(); await loadReports(); }
-  catch (error) { reportsList.innerHTML = `<p class="reports-empty">${esc(error.message)}</p>`; }
-})();
+(async () => { try { await loadMeta(); await loadReports(); } catch (error) { reportsList.innerHTML = `<p class="reports-empty">${esc(error.message)}</p>`; } })();

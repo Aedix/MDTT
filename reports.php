@@ -22,6 +22,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   <link rel="stylesheet" href="/style.css?v=11" />
   <link rel="stylesheet" href="/mdt.css?v=7" />
   <link rel="stylesheet" href="/reports.css?v=3" />
+  <link rel="stylesheet" href="/mdt-status-highlights.css?v=1" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">
   <div class="mdt-shell">
@@ -114,7 +115,8 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   </template>
 
   <script>document.querySelector('#logoutButton').addEventListener('click',async()=>{const response=await fetch('/api/logout.php',{method:'POST',credentials:'same-origin'});const result=await response.json();window.location.href=result.redirect||'/index.html';});</script>
-  <script src="/reports.js?v=4"></script>
+  <script src="/reports.js?v=6"></script>
+  <script src="/reports-runtime-fixes.js?v=1"></script>
   <script src="/reports-export-preview.js?v=1"></script>
 </body>
 </html>

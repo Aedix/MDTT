@@ -9,7 +9,6 @@ function reportStatusLabel(string $status): string
     return match ($status) {
         'draft' => 'Brouillon',
         'submitted' => 'Soumis',
-        'pending_validation' => 'En attente de validation',
         'validated' => 'Validé',
         'archived' => 'Archivé',
         'rejected' => 'Rejeté',
@@ -31,6 +30,19 @@ function reportTypeLabel(string $type): string
     };
 }
 
+function reportAccessLabel(string $scope): string
+{
+    return match ($scope) {
+        'service' => 'Service actif uniquement',
+        'interservice' => 'Interservice',
+        'division' => 'Division',
+        'supervisors' => 'Supervisor minimum',
+        'directors' => 'Director uniquement',
+        'explicit' => 'Agents autorisés uniquement',
+        default => $scope,
+    };
+}
+
 function userActiveServiceCode(array $user): string
 {
     return strtoupper(trim((string) ($user['active_service_code'] ?? $user['service'] ?? 'MDT')));
@@ -44,21 +56,15 @@ function canUserAccessReport(array $user, array $report, PDO $pdo): bool
 
     $userId = (int) ($user['id'] ?? 0);
     $serviceCode = userActiveServiceCode($user);
+    $scope = (string) ($report['access_scope'] ?? 'service');
 
     if ($userId > 0 && (int) ($report['created_by'] ?? 0) === $userId) {
         return true;
     }
 
-    if (strtoupper((string) ($report['service_code'] ?? '')) !== $serviceCode) {
+    if ($scope !== 'interservice' && strtoupper((string) ($report['service_code'] ?? '')) !== $serviceCode) {
         return false;
     }
-
-    $requiredPower = (int) ($report['minimum_power_level'] ?? 0);
-    if ($requiredPower > 0 && getRolePowerLevel($user['role'] ?? null) < $requiredPower) {
-        return false;
-    }
-
-    $scope = (string) ($report['access_scope'] ?? 'service');
 
     if ($scope === 'explicit') {
         $statement = $pdo->prepare('SELECT 1 FROM report_allowed_users WHERE report_id = :report_id AND user_id = :user_id LIMIT 1');

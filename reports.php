@@ -21,7 +21,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   <title>MDT - Rapports</title>
   <link rel="stylesheet" href="/style.css?v=11" />
   <link rel="stylesheet" href="/mdt.css?v=7" />
-  <link rel="stylesheet" href="/reports.css?v=1" />
+  <link rel="stylesheet" href="/reports.css?v=2" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">
   <div class="mdt-shell">
@@ -52,7 +52,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
       <main class="mdt-content reports-page">
         <section class="reports-command-card">
           <div><p class="mdt-kicker">Documents opérationnels</p><h2>Rapports</h2></div>
-          <div class="reports-command-bar"><input type="search" id="reportSearchInput" placeholder="Numéro, titre, résumé, faits..." autocomplete="off" /><button type="button" id="newReportButton" class="mdt-button">+ Rapport</button></div>
+          <div class="reports-command-bar"><input type="search" id="reportSearchInput" placeholder="Numéro, titre, récit, emplacement..." autocomplete="off" /><button type="button" id="newReportButton" class="mdt-button">+ Rapport</button></div>
         </section>
 
         <section class="reports-layout">
@@ -70,36 +70,41 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
     <div class="report-panel-inner" data-editing="1">
       <header class="report-document-header">
         <div><p class="mdt-kicker" id="reportNumberView">Nouveau rapport</p><h2 id="reportTitleView">Nouveau rapport</h2><p class="report-meta" id="reportMetaView">Non enregistré</p></div>
-        <div class="report-actions"><button type="button" id="editReportButton" class="search-icon-button edit" hidden title="Modifier">✎</button><button type="button" id="printReportButton" class="mdt-button-secondary">Export PDF</button><button type="button" id="saveReportButton" class="mdt-button">Sauvegarder</button><button type="button" id="cancelReportButton" class="mdt-button-secondary">Annuler</button></div>
+        <div class="report-actions"><button type="button" id="editReportButton" class="search-icon-button edit" hidden title="Modifier">✎</button><button type="button" id="previewReportButton" class="mdt-button-secondary">Aperçu</button><button type="button" id="downloadReportButton" class="mdt-button-secondary">Télécharger</button><button type="button" id="saveReportButton" class="mdt-button">Sauvegarder</button><button type="button" id="cancelReportButton" class="mdt-button-secondary">Annuler</button></div>
       </header>
       <input type="hidden" id="reportId" />
+      <input type="hidden" id="reportStatus" value="submitted" />
       <nav class="report-tabs"><button type="button" class="report-tab active" data-tab="main">Rapport</button><button type="button" class="report-tab" data-tab="access">Accès</button><button type="button" class="report-tab" data-tab="links">Liaisons</button><button type="button" class="report-tab" data-tab="history">Historique</button></nav>
       <div class="report-tab-panels">
         <section class="report-tab-panel active" data-panel="main">
           <div class="report-form-grid two">
             <label>Titre<input id="reportTitle" type="text" /></label>
             <label>Type<select id="reportType"></select></label>
-            <label>Statut<select id="reportStatus"></select></label>
-            <label>Date / heure<input id="reportOccurredAt" type="datetime-local" /></label>
-            <label class="wide">Résumé<textarea id="reportSummary" rows="3"></textarea></label>
-            <label class="wide">Faits constatés<textarea id="reportFacts" rows="7"></textarea></label>
-            <label class="wide">Actions effectuées<textarea id="reportActionsTaken" rows="5"></textarea></label>
-            <label class="wide">Conclusions<textarea id="reportConclusions" rows="5"></textarea></label>
-            <label class="wide">Notes complémentaires<textarea id="reportNotes" rows="4"></textarea></label>
+            <label>Date / heure de l’incident<input id="reportOccurredAt" type="datetime-local" /></label>
+            <label>Emplacement de l’incident<input id="reportLocation" type="text" placeholder="Los Santos" /></label>
+            <label class="wide">Récit<textarea id="reportFacts" rows="10"></textarea></label>
+            <label class="wide">Actions effectuées<textarea id="reportActionsTaken" rows="4"></textarea></label>
+            <label class="wide">Conclusions<textarea id="reportConclusions" rows="4"></textarea></label>
+            <label class="wide">Notes complémentaires<textarea id="reportNotes" rows="3"></textarea></label>
           </div>
           <article id="reportDocumentView" class="report-document-view"></article>
         </section>
         <section class="report-tab-panel" data-panel="access">
           <div class="report-form-grid two">
-            <label>Accès<select id="reportAccessScope"></select></label>
+            <label>Visibilité<select id="reportAccessScope"></select></label>
             <label>Division<select id="reportDivision"></select></label>
-            <label>Power level minimum<input id="reportMinimumPower" type="number" min="0" max="100" value="0" /></label>
-            <label>Rôle minimum<input id="reportMinimumRole" type="text" placeholder="ex: sergeant, chief..." /></label>
           </div>
-          <p class="report-help">Les accès sont filtrés côté serveur. Le superadmin et le créateur gardent toujours accès.</p>
+          <p class="report-help">Service actif = visible uniquement par ce service. Interservice = visible par les autres services autorisés du MDT. Les restrictions Supervisor / Director restent filtrées côté serveur.</p>
         </section>
         <section class="report-tab-panel" data-panel="links">
-          <div class="report-form-grid three"><label>Citoyens liés<input id="reportCitizenIds" type="text" placeholder="IDs séparés par virgules" /></label><label>Véhicules liés<input id="reportVehicleIds" type="text" placeholder="IDs séparés par virgules" /></label><label>Agents liés<input id="reportAgentIds" type="text" placeholder="IDs séparés par virgules" /></label></div>
+          <div class="linked-search-grid">
+            <div class="linked-search-box"><label>Citoyens liés<input id="citizenLookupInput" type="search" placeholder="Rechercher nom, prénom, téléphone..." /></label><div id="citizenLookupResults" class="lookup-results"></div><div id="reportCitizensSelected" class="selected-links"></div></div>
+            <div class="linked-search-box"><label>Véhicules liés<input id="vehicleLookupInput" type="search" placeholder="Rechercher plaque, modèle, couleur..." /></label><div id="vehicleLookupResults" class="lookup-results"></div><div id="reportVehiclesSelected" class="selected-links"></div></div>
+            <div class="linked-search-box"><label>Agents liés<input id="agentLookupInput" type="search" placeholder="Rechercher agent, grade..." /></label><div id="agentLookupResults" class="lookup-results"></div><div id="reportAgentsSelected" class="selected-links"></div></div>
+          </div>
+          <input type="hidden" id="reportCitizenIds" />
+          <input type="hidden" id="reportVehicleIds" />
+          <input type="hidden" id="reportAgentIds" />
           <div id="reportLinksView" class="report-links-view"></div>
         </section>
         <section class="report-tab-panel" data-panel="history"><div id="reportLogsView" class="report-logs-view"></div></section>
@@ -109,6 +114,6 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   </template>
 
   <script>document.querySelector('#logoutButton').addEventListener('click',async()=>{const response=await fetch('/api/logout.php',{method:'POST',credentials:'same-origin'});const result=await response.json();window.location.href=result.redirect||'/index.html';});</script>
-  <script src="/reports.js?v=1"></script>
+  <script src="/reports.js?v=2"></script>
 </body>
 </html>

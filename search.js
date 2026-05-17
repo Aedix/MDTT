@@ -61,6 +61,14 @@ function displayCheck(value) { return value ? '<span class="license-pill ok">Oui
 function healthLabel(value) { return value === 'deceased' ? 'Décédé' : 'En vie'; }
 function statusClass(value) { return `status-${String(value || 'inactif').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-')}`; }
 
+function showEmptyCitizenPanel() {
+  selectedCitizenId = null;
+  selectedCitizenData = null;
+  isEditing = false;
+  citizenPanel.innerHTML = `<div class="citizen-empty-state"><p class="mdt-kicker">Fiche citoyen</p><h3>Sélectionne un citoyen</h3><p>La fiche complète, les véhicules et le casier judiciaire apparaîtront ici.</p></div>`;
+  renderCitizens();
+}
+
 async function loadCitizens() {
   const q = encodeURIComponent(citizenSearchInput?.value.trim() || '');
   citizensList.innerHTML = '<p class="search-empty">Chargement...</p>';
@@ -212,14 +220,9 @@ async function loadCitizen(id) {
   } catch (error) { alert(error.message); }
 }
 
-function resetNewCitizenForm() {
-  fillCitizen(null);
-  setMessage('Création annulée.', 'info');
-}
-
 function cancelCitizenEdit() {
   if (selectedCitizenId) loadCitizen(selectedCitizenId);
-  else resetNewCitizenForm();
+  else showEmptyCitizenPanel();
 }
 
 function citizenPayload() {

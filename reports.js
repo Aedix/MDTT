@@ -14,6 +14,7 @@ let linkedVehicles = [];
 let linkedAgents = [];
 let currentReportServiceLogo = '';
 let currentReportServiceCode = '';
+let currentReportServiceName = '';
 let currentReportCreatedBy = '';
 
 function esc(value) {
@@ -51,6 +52,10 @@ function activeServiceLogo() {
 
 function activeServiceCode() {
   return document.querySelector('.mdt-brand-title')?.textContent?.trim() || 'MDT';
+}
+
+function activeServiceName() {
+  return document.querySelector('.mdt-topbar .mdt-kicker')?.textContent?.trim() || activeServiceCode();
 }
 
 function fillSelect(id, items, placeholder = null) {
@@ -113,11 +118,15 @@ function showTab(tabName) {
 }
 
 function formatDateParts(value) {
-  if (!value) return { date: 'xx.xx.2026', time: '00:00 - 00:00', weekday: 'Non renseigné' };
+  if (!value) return { date: 'xx.xx.2026', time: '00:00', weekday: 'Non renseigné' };
   const date = new Date(String(value).replace(' ', 'T'));
-  if (Number.isNaN(date.getTime())) return { date: value, time: '00:00 - 00:00', weekday: 'Non renseigné' };
+  if (Number.isNaN(date.getTime())) return { date: value, time: '00:00', weekday: 'Non renseigné' };
   const weekday = date.toLocaleDateString('fr-FR', { weekday: 'long' });
-  return { date: date.toLocaleDateString('fr-FR'), time: `${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} - 00:00`, weekday: weekday.charAt(0).toUpperCase() + weekday.slice(1) };
+  return {
+    date: date.toLocaleDateString('fr-FR'),
+    time: date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+    weekday: weekday.charAt(0).toUpperCase() + weekday.slice(1)
+  };
 }
 
 function linkedNames(items) { return items.length ? items.map(item => item.label || `#${item.id}`).join(', ') : ''; }
@@ -129,13 +138,14 @@ function renderDocument(report) {
   const officers = linkedNames(linkedAgents) || 'Non renseigné';
   const logo = report.service_logo_path || currentReportServiceLogo || activeServiceLogo();
   const serviceCode = report.service_code || currentReportServiceCode || activeServiceCode();
+  const serviceName = report.service_name || currentReportServiceName || activeServiceName();
   const signature = report.created_by_username || currentReportCreatedBy || '';
   get('reportNumberView').textContent = report.report_number || 'Nouveau rapport';
   get('reportTitleView').textContent = report.title || 'Nouveau rapport';
   get('reportMetaView').textContent = `${type} · ${status}`;
   get('reportDocumentView').innerHTML = `
     <div class="fib-report-template" id="reportPdfSource">
-      <div class="fib-template-header"><div><em>Federal Investigation Bureau</em><strong>RAPPORT</strong></div><div class="fib-template-logo">${logo ? `<img src="${esc(logo)}" alt="${esc(serviceCode)}">` : esc(serviceCode)}</div></div>
+      <div class="fib-template-header"><div><em>${esc(serviceName)}</em><strong>RAPPORT</strong></div><div class="fib-template-logo">${logo ? `<img src="${esc(logo)}" alt="${esc(serviceCode)}">` : esc(serviceCode)}</div></div>
       <div class="fib-template-grid three"><div><span>DATE DE L’INCIDENT</span><strong>${esc(date.date)}</strong></div><div><span>HEURE DE L’INCIDENT</span><strong>${esc(date.time)}</strong></div><div><span>JOUR DE LA SEMAINE</span><strong>${esc(date.weekday)}</strong></div></div>
       <div class="fib-template-row"><span>AGENT INTERVENANT</span><strong>${esc(officers)}</strong></div>
       <div class="fib-template-block"><span>RÉCIT</span><p>${esc(report.facts || 'Non renseigné')}</p></div>
@@ -175,6 +185,7 @@ function fillReport(report = null, extra = {}) {
   selectedReportId = Number(report?.id || 0) || null;
   currentReportServiceLogo = report?.service_logo_path || activeServiceLogo();
   currentReportServiceCode = report?.service_code || activeServiceCode();
+  currentReportServiceName = report?.service_name || activeServiceName();
   currentReportCreatedBy = report?.created_by_username || '';
   setVal('reportId', report?.id || '');
   setVal('reportTitle', report?.title || '');
@@ -196,10 +207,10 @@ function fillReport(report = null, extra = {}) {
   renderReports();
 }
 
-async function loadReport(id) { try { const result = await apiGet(`/api/reports.php?action=get&id=${encodeURIComponent(id)}`); fillReport(result.report, result); } catch (error) { alert(error.message); } }
+async function loadReport(id) { try { const result = await apiGet(`/api/report-detail.php?id=${encodeURIComponent(id)}`); fillReport(result.report, result); } catch (error) { alert(error.message); } }
 
 function payload() {
-  return { id: Number(val('reportId') || 0), title: val('reportTitle'), type_code: val('reportType'), status: val('reportStatus') || 'submitted', occurred_at: val('reportOccurredAt') ? val('reportOccurredAt').replace('T', ' ') + ':00' : '', location: val('reportLocation'), access_scope: val('reportAccessScope'), division_id: Number(val('reportDivision') || 0), service_logo_path: currentReportServiceLogo, service_code: currentReportServiceCode, created_by_username: currentReportCreatedBy, summary: val('reportFacts').slice(0, 500), facts: val('reportFacts'), actions_taken: val('reportActionsTaken'), conclusions: val('reportConclusions'), notes: val('reportNotes'), citizen_ids: ids(val('reportCitizenIds')), vehicle_ids: ids(val('reportVehicleIds')), agent_ids: ids(val('reportAgentIds')) };
+  return { id: Number(val('reportId') || 0), title: val('reportTitle'), type_code: val('reportType'), status: val('reportStatus') || 'submitted', occurred_at: val('reportOccurredAt') ? val('reportOccurredAt').replace('T', ' ') + ':00' : '', location: val('reportLocation'), access_scope: val('reportAccessScope'), division_id: Number(val('reportDivision') || 0), service_logo_path: currentReportServiceLogo, service_code: currentReportServiceCode, service_name: currentReportServiceName, created_by_username: currentReportCreatedBy, summary: val('reportFacts').slice(0, 500), facts: val('reportFacts'), actions_taken: val('reportActionsTaken'), conclusions: val('reportConclusions'), notes: val('reportNotes'), citizen_ids: ids(val('reportCitizenIds')), vehicle_ids: ids(val('reportVehicleIds')), agent_ids: ids(val('reportAgentIds')) };
 }
 
 async function saveReport() { setMsg('Sauvegarde du rapport...', 'info'); try { const result = await apiPost('/api/reports.php?action=save', payload()); setMsg('Rapport sauvegardé.', 'success'); await loadReports(); await loadReport(result.id); } catch (error) { setMsg(error.message); } }

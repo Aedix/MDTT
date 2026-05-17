@@ -18,12 +18,26 @@ function jsonResponse(array $payload, int $status = 200): void
     exit;
 }
 
+function canRemoveReportAsSuperAdmin(array $user): bool
+{
+    $role = strtolower(trim((string) ($user['role'] ?? '')));
+    $role = str_replace(['-', ' '], '_', $role);
+
+    return in_array($role, ['super_admin', 'superadmin'], true) || userHasPermission($user, '*');
+}
+
 try {
+    $canRemove = canRemoveReportAsSuperAdmin($user);
+
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-        jsonResponse(['success' => true, 'can_remove_reports' => isSuperAdminUser($user)]);
+        jsonResponse([
+            'success' => true,
+            'can_remove_reports' => $canRemove,
+            'role' => $user['role'] ?? null,
+        ]);
     }
 
-    if (!isSuperAdminUser($user)) {
+    if (!$canRemove) {
         jsonResponse(['success' => false, 'message' => 'Action réservée aux superadmins.'], 403);
     }
 

@@ -20,10 +20,11 @@ function jsonResponse(array $payload, int $status = 200): void
 
 function canRemoveReportAsSuperAdmin(array $user): bool
 {
+    $username = strtolower(trim((string) ($user['username'] ?? '')));
     $role = strtolower(trim((string) ($user['role'] ?? '')));
     $role = str_replace(['-', ' '], '_', $role);
 
-    return in_array($role, ['super_admin', 'superadmin'], true) || userHasPermission($user, '*');
+    return $username === 'admin' || in_array($role, ['super_admin', 'superadmin'], true) || userHasPermission($user, '*');
 }
 
 try {
@@ -33,6 +34,7 @@ try {
         jsonResponse([
             'success' => true,
             'can_remove_reports' => $canRemove,
+            'username' => $user['username'] ?? null,
             'role' => $user['role'] ?? null,
         ]);
     }

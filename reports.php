@@ -70,7 +70,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
     <div class="report-panel-inner" data-editing="1">
       <header class="report-document-header">
         <div><p class="mdt-kicker" id="reportNumberView">Nouveau rapport</p><h2 id="reportTitleView">Nouveau rapport</h2><p class="report-meta" id="reportMetaView">Non enregistré</p></div>
-        <div class="report-actions"><button type="button" id="editReportButton" class="search-icon-button edit" hidden title="Modifier">✎</button><button type="button" id="previewReportButton" class="mdt-button-secondary">Aperçu</button><button type="button" id="downloadReportButton" class="mdt-button-secondary">Télécharger PDF</button><button type="button" id="saveReportButton" class="mdt-button">Sauvegarder</button><button type="button" id="cancelReportButton" class="mdt-button-secondary">Annuler</button></div>
+        <div class="report-actions"><button type="button" id="editReportButton" class="search-icon-button edit" hidden title="Modifier">✎</button><button type="button" id="previewReportButton" class="mdt-button-secondary">Aperçu</button><button type="button" id="downloadReportButton" class="mdt-button-secondary">Ouvrir export PDF</button><button type="button" id="saveReportButton" class="mdt-button">Sauvegarder</button><button type="button" id="cancelReportButton" class="mdt-button-secondary">Annuler</button></div>
       </header>
       <input type="hidden" id="reportId" />
       <input type="hidden" id="reportStatus" value="submitted" />
@@ -94,7 +94,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
             <label>Visibilité<select id="reportAccessScope"></select></label>
             <label>Division<select id="reportDivision"></select></label>
           </div>
-          <p class="report-help">Service actif = visible uniquement par ce service. Interservice = visible par les autres services autorisés du MDT. Les restrictions Supervisor / Director sont appliquées automatiquement.</p>
+          <p class="report-help">Service actif = visible uniquement par ce service. Interservice = visible par les autres services autorisés du MDT.</p>
         </section>
         <section class="report-tab-panel" data-panel="links">
           <div class="linked-search-grid">
@@ -114,8 +114,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   </template>
 
   <script>document.querySelector('#logoutButton').addEventListener('click',async()=>{const response=await fetch('/api/logout.php',{method:'POST',credentials:'same-origin'});const result=await response.json();window.location.href=result.redirect||'/index.html';});</script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="/reports.js?v=4"></script>
-  <script src="/reports-pdf-fix.js?v=1"></script>
+  <script src="/reports-export-preview.js?v=1"></script>
 </body>
 </html>

@@ -116,5 +116,6 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   <script>document.querySelector('#logoutButton').addEventListener('click',async()=>{const response=await fetch('/api/logout.php',{method:'POST',credentials:'same-origin'});const result=await response.json();window.location.href=result.redirect||'/index.html';});</script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
   <script src="/reports.js?v=4"></script>
+  <script src="/reports-pdf-fix.js?v=1"></script>
 </body>
 </html>

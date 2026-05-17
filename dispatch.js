@@ -1,3 +1,10 @@
+const dashboardReportsNavLink = [...document.querySelectorAll('.mdt-nav-link')].find((link) => (link.textContent || '').trim().toLowerCase().startsWith('rapports'));
+if (dashboardReportsNavLink) {
+  dashboardReportsNavLink.href = '/reports.php';
+  dashboardReportsNavLink.classList.remove('disabled');
+  dashboardReportsNavLink.querySelector('.mdt-placeholder')?.remove();
+}
+
 const dispatchStylesheet = document.createElement('link');
 dispatchStylesheet.rel = 'stylesheet';
 dispatchStylesheet.href = '/dispatch.css?v=3';

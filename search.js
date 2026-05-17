@@ -59,6 +59,7 @@ function getInput(id) {
 function displayValue(value) { return value ? escapeHtml(value) : '<span class="empty-value">Non renseigné</span>'; }
 function displayCheck(value) { return value ? '<span class="license-pill ok">Oui</span>' : '<span class="license-pill no">Non</span>'; }
 function healthLabel(value) { return value === 'deceased' ? 'Décédé' : 'En vie'; }
+function statusClass(value) { return `status-${String(value || 'inactif').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-')}`; }
 
 async function loadCitizens() {
   const q = encodeURIComponent(citizenSearchInput?.value.trim() || '');
@@ -81,7 +82,7 @@ function renderCitizens() {
     const meta = [citizen.phone, citizen.job, citizen.affiliation].filter(Boolean).join(' · ') || citizen.address || 'Aucune information rapide';
     const photo = citizen.photo_path ? `<img src="${escapeHtml(citizen.photo_path)}" alt="${escapeHtml(fullName)}">` : 'ID';
     const health = citizen.health_status === 'deceased' ? 'deceased' : 'alive';
-    return `<button type="button" class="citizen-row ${Number(citizen.id) === selectedCitizenId ? 'active' : ''}" data-id="${Number(citizen.id)}"><span class="health-dot ${health}" title="${healthLabel(health)}"></span><span class="citizen-row-photo">${photo}</span><span class="citizen-row-main"><strong>${escapeHtml(fullName)}</strong><span>${escapeHtml(meta)}</span></span><span class="citizen-row-badges"><span class="search-mini-badge">${Number(citizen.vehicles_count || 0)}V</span><span class="search-mini-badge">${Number(citizen.records_count || 0)}C</span></span></button>`;
+    return `<button type="button" class="citizen-row ${Number(citizen.id) === selectedCitizenId ? 'active' : ''}" data-id="${Number(citizen.id)}"><span class="health-dot ${health}" title="${healthLabel(health)}" data-label="${healthLabel(health)}"></span><span class="citizen-row-photo">${photo}</span><span class="citizen-row-main"><strong>${escapeHtml(fullName)}</strong><span>${escapeHtml(meta)}</span></span><span class="citizen-row-badges"><span class="search-mini-badge">${Number(citizen.vehicles_count || 0)}V</span><span class="search-mini-badge">${Number(citizen.records_count || 0)}C</span></span></button>`;
   }).join('');
 }
 
@@ -186,11 +187,14 @@ function fillCitizen(citizen) {
   healthDot.id = 'citizenHealthDot';
   healthDot.className = `health-dot large ${health}`;
   healthDot.title = healthLabel(health);
+  healthDot.dataset.label = healthLabel(health);
   document.querySelector('.citizen-profile-main').prepend(healthDot);
   updateCitizenHeader(citizen);
   renderReadOnlyPanels(citizen || {});
   renderVehicles([]);
   renderRecords([]);
+  setTabBadge('vehicles', 0);
+  setTabBadge('records', 0);
   renderCitizens();
   showTab('identity');
   setEditMode(!citizen?.id);
@@ -206,6 +210,16 @@ async function loadCitizen(id) {
     setTabBadge('vehicles', (result.vehicles || []).length);
     setTabBadge('records', (result.records || []).length);
   } catch (error) { alert(error.message); }
+}
+
+function resetNewCitizenForm() {
+  fillCitizen(null);
+  setMessage('Création annulée.', 'info');
+}
+
+function cancelCitizenEdit() {
+  if (selectedCitizenId) loadCitizen(selectedCitizenId);
+  else resetNewCitizenForm();
 }
 
 function citizenPayload() {
@@ -286,25 +300,27 @@ function openCropper(file, type, callback) {
 
 function renderVehicles(vehicles, canDelete = false) {
   const container = document.querySelector('#vehiclesList'); if (!container) return;
+  setTabBadge('vehicles', vehicles.length);
   if (!vehicles.length) { container.innerHTML = '<p class="search-empty">Aucun véhicule enregistré.</p>'; return; }
-  container.innerHTML = vehicles.map((v) => `<div class="record-item vehicle-item" data-vehicle='${escapeHtml(JSON.stringify(v))}'>${v.photo_path ? `<button type="button" class="vehicle-thumb vehicle-image-button" data-image="${escapeHtml(v.photo_path)}"><img src="${escapeHtml(v.photo_path)}" alt="${escapeHtml(v.model || 'Véhicule')}"></button>` : '<span class="vehicle-thumb empty">VH</span>'}<div><strong>${escapeHtml(v.model || 'Modèle inconnu')}</strong><p>${escapeHtml([v.category, v.color, v.plate, v.registration_status].filter(Boolean).join(' · '))}</p>${v.notes ? `<p>${escapeHtml(v.notes)}</p>` : ''}</div><div class="record-actions"><button type="button" class="search-icon-button edit-vehicle">✎</button>${canDelete ? '<button type="button" class="search-icon-button delete delete-vehicle">×</button>' : ''}</div></div>`).join('');
+  container.innerHTML = vehicles.map((v) => `<div class="record-item vehicle-item ${statusClass(v.registration_status)}" data-vehicle='${escapeHtml(JSON.stringify(v))}'>${v.photo_path ? `<button type="button" class="vehicle-thumb vehicle-image-button" data-image="${escapeHtml(v.photo_path)}" title="Agrandir l’image"><img src="${escapeHtml(v.photo_path)}" alt="${escapeHtml(v.model || 'Véhicule')}"></button>` : '<span class="vehicle-thumb empty">VH</span>'}<div><strong>${escapeHtml(v.model || 'Modèle inconnu')}</strong><p>${escapeHtml([v.category, v.color, v.plate, v.registration_status].filter(Boolean).join(' · '))}</p>${v.notes ? `<p>${escapeHtml(v.notes)}</p>` : ''}</div><div class="record-actions"><button type="button" class="search-icon-button edit-vehicle">✎</button>${canDelete ? '<button type="button" class="search-icon-button delete delete-vehicle">×</button>' : ''}</div></div>`).join('');
 }
 
 function renderRecords(records, canDelete = false) {
   const container = document.querySelector('#recordsList'); if (!container) return;
+  setTabBadge('records', records.length);
   if (!records.length) { container.innerHTML = '<p class="search-empty">Aucune infraction enregistrée.</p>'; return; }
   container.innerHTML = records.map((r) => `<div class="record-item" data-record='${escapeHtml(JSON.stringify(r))}'><div><strong>${escapeHtml(r.offense_type)}</strong><p>${escapeHtml([r.offense_date, r.case_status, r.sanction].filter(Boolean).join(' · '))}</p>${r.description ? `<p>${escapeHtml(r.description)}</p>` : ''}</div><div class="record-actions"><button type="button" class="search-icon-button edit-record">✎</button>${canDelete ? '<button type="button" class="search-icon-button delete delete-record">×</button>' : ''}</div></div>`).join('');
 }
 
-function fillVehicleForm(v = {}) { showTab('vehicles'); document.querySelector('#vehicleForm').hidden = false; setInput('vehicleId', v.id || ''); setInput('vehicleModel', v.model || ''); setInput('vehicleCategory', v.category || ''); setInput('vehicleColor', v.color || ''); setInput('vehiclePlate', v.plate || ''); setInput('vehicleStatus', v.registration_status || 'Actif'); setInput('vehiclePhotoPath', v.photo_path || ''); setInput('vehicleNotes', v.notes || ''); document.querySelector('#vehiclePhotoButton').innerHTML = v.photo_path ? `Photo ajoutée<br><small>${escapeHtml(String(v.photo_path).split('/').pop())}</small>` : 'Photo véhicule<br><small>png/jpg/webp · max 4 Mo</small>'; }
-function fillRecordForm(r = {}) { showTab('records'); document.querySelector('#recordForm').hidden = false; setInput('recordId', r.id || ''); setInput('offenseDate', r.offense_date || ''); setInput('offenseType', r.offense_type || ''); setInput('caseStatus', r.case_status || 'Ouvert'); setInput('sanction', r.sanction || ''); setInput('description', r.description || ''); setInput('recordNotes', r.notes || ''); }
+function fillVehicleForm(v = {}) { if (!isEditing) return; showTab('vehicles'); document.querySelector('#vehicleForm').hidden = false; setInput('vehicleId', v.id || ''); setInput('vehicleModel', v.model || ''); setInput('vehicleCategory', v.category || ''); setInput('vehicleColor', v.color || ''); setInput('vehiclePlate', v.plate || ''); setInput('vehicleStatus', v.registration_status || 'Actif'); setInput('vehiclePhotoPath', v.photo_path || ''); setInput('vehicleNotes', v.notes || ''); document.querySelector('#vehiclePhotoButton').innerHTML = v.photo_path ? `Photo ajoutée<br><small>${escapeHtml(String(v.photo_path).split('/').pop())}</small>` : 'Photo véhicule<br><small>png/jpg/webp · max 4 Mo</small>'; }
+function fillRecordForm(r = {}) { if (!isEditing) return; showTab('records'); document.querySelector('#recordForm').hidden = false; setInput('recordId', r.id || ''); setInput('offenseDate', r.offense_date || ''); setInput('offenseType', r.offense_type || ''); setInput('caseStatus', r.case_status || 'Ouvert'); setInput('sanction', r.sanction || ''); setInput('description', r.description || ''); setInput('recordNotes', r.notes || ''); }
 
 async function saveVehicle(event) { event.preventDefault(); const citizenId = Number(getInput('citizenId')); if (!citizenId) return setMessage('Sauvegarde d’abord la fiche citoyen.'); try { await apiPost('/api/citizens.php?action=save_vehicle', { id: Number(getInput('vehicleId') || 0), citizen_id: citizenId, model: getInput('vehicleModel'), category: getInput('vehicleCategory'), color: getInput('vehicleColor'), plate: getInput('vehiclePlate'), registration_status: getInput('vehicleStatus'), photo_path: getInput('vehiclePhotoPath'), notes: getInput('vehicleNotes') }); setMessage('Véhicule sauvegardé.', 'success'); await loadCitizen(citizenId); showTab('vehicles'); } catch (error) { setMessage(error.message); } }
 async function saveRecord(event) { event.preventDefault(); const citizenId = Number(getInput('citizenId')); if (!citizenId) return setMessage('Sauvegarde d’abord la fiche citoyen.'); try { await apiPost('/api/citizens.php?action=save_record', { id: Number(getInput('recordId') || 0), citizen_id: citizenId, offense_date: getInput('offenseDate'), offense_type: getInput('offenseType'), case_status: getInput('caseStatus'), sanction: getInput('sanction'), description: getInput('description'), notes: getInput('recordNotes') }); setMessage('Infraction sauvegardée.', 'success'); await loadCitizen(citizenId); showTab('records'); } catch (error) { setMessage(error.message); } }
 
 function bindCitizenPanelEvents() {
   document.querySelector('#saveCitizenButton').addEventListener('click', saveCitizen);
-  document.querySelector('#resetCitizenButton').addEventListener('click', () => selectedCitizenId ? loadCitizen(selectedCitizenId) : fillCitizen(null));
+  document.querySelector('#resetCitizenButton').addEventListener('click', cancelCitizenEdit);
   document.querySelector('#editCitizenButton').addEventListener('click', () => setEditMode(true));
   document.querySelectorAll('#lastName,#firstName,#birthDate,#phone,#job,#affiliation,#specialStatus').forEach((field) => field.addEventListener('input', () => updateCitizenHeader(selectedCitizenData)));
   document.querySelectorAll('.citizen-tab').forEach((tab) => tab.addEventListener('click', () => showTab(tab.dataset.tab)));
@@ -315,7 +331,7 @@ function bindCitizenPanelEvents() {
   document.querySelector('#newVehicleButton').addEventListener('click', () => fillVehicleForm());
   document.querySelector('#cancelVehicleButton').addEventListener('click', () => document.querySelector('#vehicleForm').hidden = true);
   document.querySelector('#vehicleForm').addEventListener('submit', saveVehicle);
-  document.querySelector('#vehiclePhotoButton').addEventListener('click', () => document.querySelector('#vehiclePhotoInput').click());
+  document.querySelector('#vehiclePhotoButton').addEventListener('click', () => { if (isEditing) document.querySelector('#vehiclePhotoInput').click(); });
   document.querySelector('#vehiclePhotoInput').addEventListener('change', async (event) => { const file = event.target.files?.[0]; if (!file) return; openCropper(file, 'vehicle', async (cropped) => { try { const path = await uploadPhoto(cropped, '/api/upload-vehicle-photo.php'); setInput('vehiclePhotoPath', path); document.querySelector('#vehiclePhotoButton').innerHTML = `Photo ajoutée<br><small>${escapeHtml(path.split('/').pop())}</small>`; } catch (error) { setMessage(error.message); } }); });
   document.querySelector('#newRecordButton').addEventListener('click', () => fillRecordForm());
   document.querySelector('#cancelRecordButton').addEventListener('click', () => document.querySelector('#recordForm').hidden = true);
@@ -326,11 +342,11 @@ citizensList.addEventListener('click', (event) => { const row = event.target.clo
 citizenPanel.addEventListener('click', async (event) => {
   const vehicleItem = event.target.closest('[data-vehicle]'); const recordItem = event.target.closest('[data-record]');
   const vehicleImage = event.target.closest('.vehicle-image-button');
-  if (vehicleImage) openImageModal(vehicleImage.dataset.image);
+  if (vehicleImage) { event.stopPropagation(); openImageModal(vehicleImage.dataset.image); return; }
   if (event.target.closest('.edit-vehicle') && vehicleItem) fillVehicleForm(JSON.parse(vehicleItem.dataset.vehicle));
   if (event.target.closest('.edit-record') && recordItem) fillRecordForm(JSON.parse(recordItem.dataset.record));
-  if (event.target.closest('.delete-vehicle') && vehicleItem) { if (!confirm('Supprimer ce véhicule ?')) return; await apiPost('/api/citizens.php?action=delete_vehicle', { id: JSON.parse(vehicleItem.dataset.vehicle).id }); await loadCitizen(selectedCitizenId); showTab('vehicles'); }
-  if (event.target.closest('.delete-record') && recordItem) { if (!confirm('Supprimer cette infraction ?')) return; await apiPost('/api/citizens.php?action=delete_record', { id: JSON.parse(recordItem.dataset.record).id }); await loadCitizen(selectedCitizenId); showTab('records'); }
+  if (event.target.closest('.delete-vehicle') && vehicleItem) { if (!isEditing) return; if (!confirm('Supprimer ce véhicule ?')) return; await apiPost('/api/citizens.php?action=delete_vehicle', { id: JSON.parse(vehicleItem.dataset.vehicle).id }); await loadCitizen(selectedCitizenId); showTab('vehicles'); }
+  if (event.target.closest('.delete-record') && recordItem) { if (!isEditing) return; if (!confirm('Supprimer cette infraction ?')) return; await apiPost('/api/citizens.php?action=delete_record', { id: JSON.parse(recordItem.dataset.record).id }); await loadCitizen(selectedCitizenId); showTab('records'); }
 });
 newCitizenButton.addEventListener('click', () => fillCitizen(null));
 refreshCitizensButton.addEventListener('click', loadCitizens);

@@ -12,6 +12,9 @@ let searchTimer = null;
 let linkedCitizens = [];
 let linkedVehicles = [];
 let linkedAgents = [];
+let currentReportServiceLogo = '';
+let currentReportServiceCode = '';
+let currentReportCreatedBy = '';
 
 function esc(value) {
   return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
@@ -124,8 +127,9 @@ function renderDocument(report) {
   const status = labelFor(reportMeta.statuses, report.status || 'submitted');
   const date = formatDateParts(report.occurred_at);
   const officers = linkedNames(linkedAgents) || 'Non renseigné';
-  const logo = report.service_logo_path || activeServiceLogo();
-  const serviceCode = report.service_code || activeServiceCode();
+  const logo = report.service_logo_path || currentReportServiceLogo || activeServiceLogo();
+  const serviceCode = report.service_code || currentReportServiceCode || activeServiceCode();
+  const signature = report.created_by_username || currentReportCreatedBy || '';
   get('reportNumberView').textContent = report.report_number || 'Nouveau rapport';
   get('reportTitleView').textContent = report.title || 'Nouveau rapport';
   get('reportMetaView').textContent = `${type} · ${status}`;
@@ -137,7 +141,7 @@ function renderDocument(report) {
       <div class="fib-template-block"><span>RÉCIT</span><p>${esc(report.facts || 'Non renseigné')}</p></div>
       <div class="fib-template-block small"><span>OFFICIERS IMPLIQUÉS</span><p>${esc(officers)}</p></div>
       <div class="fib-template-grid two"><div><span>TYPE D’INCIDENT</span><strong>${esc(type)}</strong></div><div><span>EMPLACEMENT D’INCIDENT</span><strong>${esc(report.location || 'Non renseigné')}</strong></div></div>
-      <div class="fib-template-block signature"><span>SIGNATURE OFFICIER</span><p>${esc(report.created_by_username || '')}</p></div>
+      <div class="fib-template-block signature"><span>SIGNATURE OFFICIER</span><p>${esc(signature)}</p></div>
     </div>
   `;
 }
@@ -169,6 +173,9 @@ function renderLogs(logs = []) { get('reportLogsView').innerHTML = logs.length ?
 function fillReport(report = null, extra = {}) {
   mountReportPanel();
   selectedReportId = Number(report?.id || 0) || null;
+  currentReportServiceLogo = report?.service_logo_path || activeServiceLogo();
+  currentReportServiceCode = report?.service_code || activeServiceCode();
+  currentReportCreatedBy = report?.created_by_username || '';
   setVal('reportId', report?.id || '');
   setVal('reportTitle', report?.title || '');
   setVal('reportType', report?.type_code || 'intervention');
@@ -192,7 +199,7 @@ function fillReport(report = null, extra = {}) {
 async function loadReport(id) { try { const result = await apiGet(`/api/reports.php?action=get&id=${encodeURIComponent(id)}`); fillReport(result.report, result); } catch (error) { alert(error.message); } }
 
 function payload() {
-  return { id: Number(val('reportId') || 0), title: val('reportTitle'), type_code: val('reportType'), status: val('reportStatus') || 'submitted', occurred_at: val('reportOccurredAt') ? val('reportOccurredAt').replace('T', ' ') + ':00' : '', location: val('reportLocation'), access_scope: val('reportAccessScope'), division_id: Number(val('reportDivision') || 0), summary: val('reportFacts').slice(0, 500), facts: val('reportFacts'), actions_taken: val('reportActionsTaken'), conclusions: val('reportConclusions'), notes: val('reportNotes'), citizen_ids: ids(val('reportCitizenIds')), vehicle_ids: ids(val('reportVehicleIds')), agent_ids: ids(val('reportAgentIds')) };
+  return { id: Number(val('reportId') || 0), title: val('reportTitle'), type_code: val('reportType'), status: val('reportStatus') || 'submitted', occurred_at: val('reportOccurredAt') ? val('reportOccurredAt').replace('T', ' ') + ':00' : '', location: val('reportLocation'), access_scope: val('reportAccessScope'), division_id: Number(val('reportDivision') || 0), service_logo_path: currentReportServiceLogo, service_code: currentReportServiceCode, created_by_username: currentReportCreatedBy, summary: val('reportFacts').slice(0, 500), facts: val('reportFacts'), actions_taken: val('reportActionsTaken'), conclusions: val('reportConclusions'), notes: val('reportNotes'), citizen_ids: ids(val('reportCitizenIds')), vehicle_ids: ids(val('reportVehicleIds')), agent_ids: ids(val('reportAgentIds')) };
 }
 
 async function saveReport() { setMsg('Sauvegarde du rapport...', 'info'); try { const result = await apiPost('/api/reports.php?action=save', payload()); setMsg('Rapport sauvegardé.', 'success'); await loadReports(); await loadReport(result.id); } catch (error) { setMsg(error.message); } }

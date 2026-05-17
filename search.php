@@ -31,7 +31,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
         <div><p class="mdt-brand-kicker">Mobile Data Terminal</p><h1 class="mdt-brand-title"><?= htmlspecialchars($activeServiceCode, ENT_QUOTES, 'UTF-8') ?></h1></div>
       </div>
       <nav class="mdt-nav" aria-label="Navigation MDT">
-        <a href="/dashboard.php" class="mdt-nav-link">Dashboard</a><a href="/search.php" class="mdt-nav-link active">Recherches</a><a href="#" class="mdt-nav-link disabled">Dossiers <span class="mdt-placeholder">Soon</span></a><a href="#" class="mdt-nav-link disabled">Rapports <span class="mdt-placeholder">Soon</span></a><a href="#" class="mdt-nav-link disabled">Dispatch <span class="mdt-placeholder">Soon</span></a><a href="#" class="mdt-nav-link disabled">Divisions <span class="mdt-placeholder">Soon</span></a><a href="#" class="mdt-nav-link disabled">Paramètres <span class="mdt-placeholder">Soon</span></a><?php if ($canOpenPanel): ?><a href="/admin/index.php" class="mdt-nav-link management">Panel de gestion</a><?php endif; ?>
+        <a href="/dashboard.php" class="mdt-nav-link">Dashboard</a><a href="/search.php" class="mdt-nav-link active">Recherches</a><a href="#" class="mdt-nav-link disabled">Dossiers <span class="mdt-placeholder">Soon</span></a><a href="/reports.php" class="mdt-nav-link">Rapports</a><a href="#" class="mdt-nav-link disabled">Dispatch <span class="mdt-placeholder">Soon</span></a><a href="#" class="mdt-nav-link disabled">Divisions <span class="mdt-placeholder">Soon</span></a><a href="#" class="mdt-nav-link disabled">Paramètres <span class="mdt-placeholder">Soon</span></a><?php if ($canOpenPanel): ?><a href="/admin/index.php" class="mdt-nav-link management">Panel de gestion</a><?php endif; ?>
       </nav>
       <div class="mdt-sidebar-footer"><strong><?= htmlspecialchars($user['username'], ENT_QUOTES, 'UTF-8') ?></strong><span><?= htmlspecialchars($activeRankName, ENT_QUOTES, 'UTF-8') ?></span></div>
     </aside>
@@ -71,6 +71,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   </template>
   <script>const logoutButton=document.querySelector('#logoutButton');logoutButton.addEventListener('click',async()=>{const response=await fetch('/api/logout.php',{method:'POST',credentials:'same-origin'});const result=await response.json();window.location.href=result.redirect||'/index.html';});</script>
   <script src="/search.js?v=6"></script>
+  <script src="/search-linked-sections.js?v=1"></script>
   <script src="/search-service-notes.js?v=1"></script>
 </body>
 </html>

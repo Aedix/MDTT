@@ -116,7 +116,8 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
 
   <script>document.querySelector('#logoutButton').addEventListener('click',async()=>{const response=await fetch('/api/logout.php',{method:'POST',credentials:'same-origin'});const result=await response.json();window.location.href=result.redirect||'/index.html';});</script>
   <script src="/reports.js?v=6"></script>
-  <script src="/reports-runtime-fixes.js?v=1"></script>
+  <script src="/reports-runtime-fixes.js?v=2"></script>
+  <script src="/reports-status-editor.js?v=1"></script>
   <script src="/reports-export-preview.js?v=1"></script>
 </body>
 </html>

@@ -9,7 +9,9 @@ let reports = [];
 let reportMeta = { types: [], statuses: [], access_scopes: [], divisions: [] };
 let selectedReportId = null;
 let searchTimer = null;
-let editing = true;
+let linkedCitizens = [];
+let linkedVehicles = [];
+let linkedAgents = [];
 
 function esc(value) {
   return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
@@ -38,7 +40,7 @@ function val(id) { return get(id)?.value.trim() || ''; }
 function setVal(id, value) { const field = get(id); if (field) field.value = value ?? ''; }
 function ids(value) { return String(value || '').split(',').map(v => Number(v.trim())).filter(Boolean); }
 function setMsg(message, type = 'error') { const box = get('reportMessage'); if (box) { box.textContent = message; box.dataset.type = type; } }
-function labelFor(items, code) { return items.find(item => item.code === code)?.label || code || 'Non défini'; }
+function labelFor(items, code) { return items.find(item => String(item.code) === String(code))?.label || code || 'Non défini'; }
 
 function fillSelect(id, items, placeholder = null) {
   const select = get(id);
@@ -48,9 +50,7 @@ function fillSelect(id, items, placeholder = null) {
   items.forEach(item => select.innerHTML += `<option value="${esc(item.code ?? item.id)}">${esc(item.label ?? item.name)}</option>`);
 }
 
-async function loadMeta() {
-  reportMeta = await apiGet('/api/reports.php?action=meta');
-}
+async function loadMeta() { reportMeta = await apiGet('/api/reports.php?action=meta'); }
 
 async function loadReports() {
   const q = encodeURIComponent(reportSearchInput.value.trim());
@@ -75,7 +75,7 @@ function renderReports() {
       <small>${esc(report.report_number)}</small>
       <strong>${esc(report.title)}</strong>
       <span>${esc(labelFor(reportMeta.types, report.type_code))} · ${esc(labelFor(reportMeta.statuses, report.status))}</span>
-      <span>${esc(report.created_by_username || 'Agent inconnu')}</span>
+      <span>${esc(report.location || report.created_by_username || 'Non renseigné')}</span>
     </button>
   `).join('');
 }
@@ -84,14 +84,12 @@ function mountReportPanel() {
   reportPanel.innerHTML = '';
   reportPanel.appendChild(reportPanelTemplate.content.cloneNode(true));
   fillSelect('reportType', reportMeta.types);
-  fillSelect('reportStatus', reportMeta.statuses);
   fillSelect('reportAccessScope', reportMeta.access_scopes);
   fillSelect('reportDivision', reportMeta.divisions.map(d => ({ code: d.id, label: d.name })), 'Aucune division');
   bindReportPanel();
 }
 
 function setEditMode(enabled) {
-  editing = enabled;
   const root = document.querySelector('.report-panel-inner');
   if (!root) return;
   root.dataset.editing = enabled ? '1' : '0';
@@ -103,38 +101,63 @@ function showTab(tabName) {
   document.querySelectorAll('.report-tab-panel').forEach(panel => panel.classList.toggle('active', panel.dataset.panel === tabName));
 }
 
+function formatDateParts(value) {
+  if (!value) return { date: 'xx.xx.2026', time: '00:00 - 00:00', weekday: 'Non renseigné' };
+  const date = new Date(String(value).replace(' ', 'T'));
+  if (Number.isNaN(date.getTime())) return { date: value, time: '00:00 - 00:00', weekday: 'Non renseigné' };
+  const weekday = date.toLocaleDateString('fr-FR', { weekday: 'long' });
+  return {
+    date: date.toLocaleDateString('fr-FR'),
+    time: `${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} - 00:00`,
+    weekday: weekday.charAt(0).toUpperCase() + weekday.slice(1)
+  };
+}
+
+function linkedNames(items) {
+  return items.length ? items.map(item => item.label || `#${item.id}`).join(', ') : '';
+}
+
 function renderDocument(report) {
   const type = labelFor(reportMeta.types, report.type_code);
-  const status = labelFor(reportMeta.statuses, report.status);
+  const status = labelFor(reportMeta.statuses, report.status || 'submitted');
+  const date = formatDateParts(report.occurred_at);
+  const officers = linkedNames(linkedAgents) || 'Non renseigné';
   get('reportNumberView').textContent = report.report_number || 'Nouveau rapport';
   get('reportTitleView').textContent = report.title || 'Nouveau rapport';
   get('reportMetaView').textContent = `${type} · ${status}`;
   get('reportDocumentView').innerHTML = `
-    <h1>${esc(report.title || 'Nouveau rapport')}</h1>
-    <p><strong>${esc(report.report_number || 'Non généré')}</strong></p>
-    <div class="doc-meta">
-      <div><strong>Type</strong><br>${esc(type)}</div>
-      <div><strong>Statut</strong><br>${esc(status)}</div>
-      <div><strong>Date / heure</strong><br>${esc(report.occurred_at || 'Non renseigné')}</div>
-      <div><strong>Accès</strong><br>${esc(labelFor(reportMeta.access_scopes, report.access_scope))}</div>
+    <div class="fib-report-template">
+      <div class="fib-template-header"><div><em>Federal Investigation Bureau</em><strong>RAPPORT</strong></div><div class="fib-template-logo">FIB</div></div>
+      <div class="fib-template-grid three"><div><span>DATE DE L’INCIDENT</span><strong>${esc(date.date)}</strong></div><div><span>HEURE DE L’INCIDENT</span><strong>${esc(date.time)}</strong></div><div><span>JOUR DE LA SEMAINE</span><strong>${esc(date.weekday)}</strong></div></div>
+      <div class="fib-template-row"><span>AGENT INTERVENANT</span><strong>${esc(officers)}</strong></div>
+      <div class="fib-template-block"><span>RÉCIT</span><p>${esc(report.facts || 'Non renseigné')}</p></div>
+      <div class="fib-template-block small"><span>OFFICIERS IMPLIQUÉS</span><p>${esc(officers)}</p></div>
+      <div class="fib-template-grid two"><div><span>TYPE D’INCIDENT</span><strong>${esc(type)}</strong></div><div><span>EMPLACEMENT D’INCIDENT</span><strong>${esc(report.location || 'Non renseigné')}</strong></div></div>
+      <div class="fib-template-block signature"><span>SIGNATURE OFFICIER</span><p>${esc(report.created_by_username || '')}</p></div>
     </div>
-    <h2>Résumé</h2><p>${esc(report.summary || 'Non renseigné')}</p>
-    <h2>Faits constatés</h2><p>${esc(report.facts || 'Non renseigné')}</p>
-    <h2>Actions effectuées</h2><p>${esc(report.actions_taken || 'Non renseigné')}</p>
-    <h2>Conclusions</h2><p>${esc(report.conclusions || 'Non renseigné')}</p>
-    <h2>Notes complémentaires</h2><p>${esc(report.notes || 'Non renseigné')}</p>
   `;
 }
 
+function setLinked(kind, items) {
+  if (kind === 'citizens') linkedCitizens = items;
+  if (kind === 'vehicles') linkedVehicles = items;
+  if (kind === 'agents') linkedAgents = items;
+  const selected = kind === 'citizens' ? linkedCitizens : kind === 'vehicles' ? linkedVehicles : linkedAgents;
+  const inputMap = { citizens: 'reportCitizenIds', vehicles: 'reportVehicleIds', agents: 'reportAgentIds' };
+  const boxMap = { citizens: 'reportCitizensSelected', vehicles: 'reportVehiclesSelected', agents: 'reportAgentsSelected' };
+  setVal(inputMap[kind], selected.map(item => item.id).join(','));
+  const box = get(boxMap[kind]);
+  if (box) box.innerHTML = selected.map(item => `<button type="button" class="selected-chip" data-kind="${kind}" data-id="${Number(item.id)}">${esc(item.label)} <span>×</span></button>`).join('');
+  renderDocument(payload());
+}
+
 function renderLinks(data) {
-  const links = get('reportLinksView');
-  const citizens = (data.citizens || []).map(c => `<div class="report-chip"><strong>Citoyen</strong> ${esc(c.last_name)} ${esc(c.first_name)} · #${Number(c.id)}</div>`).join('');
-  const vehicles = (data.vehicles || []).map(v => `<div class="report-chip"><strong>Véhicule</strong> ${esc(v.model || 'Modèle inconnu')} · ${esc(v.plate || '')} · #${Number(v.id)}</div>`).join('');
-  const agents = (data.agents || []).map(a => `<div class="report-chip"><strong>Agent</strong> ${esc(a.username)} · #${Number(a.id)}</div>`).join('');
-  links.innerHTML = citizens + vehicles + agents || '<p class="reports-empty">Aucune liaison enregistrée.</p>';
-  setVal('reportCitizenIds', (data.citizens || []).map(c => c.id).join(', '));
-  setVal('reportVehicleIds', (data.vehicles || []).map(v => v.id).join(', '));
-  setVal('reportAgentIds', (data.agents || []).map(a => a.id).join(', '));
+  linkedCitizens = (data.citizens || []).map(c => ({ id: Number(c.id), label: `${c.last_name} ${c.first_name}`, meta: c.relation_type }));
+  linkedVehicles = (data.vehicles || []).map(v => ({ id: Number(v.id), label: `${v.model || 'Véhicule'} · ${v.plate || ''}`, meta: v.relation_type }));
+  linkedAgents = (data.agents || []).map(a => ({ id: Number(a.id), label: a.username, meta: a.relation_type }));
+  setLinked('citizens', linkedCitizens);
+  setLinked('vehicles', linkedVehicles);
+  setLinked('agents', linkedAgents);
 }
 
 function renderLogs(logs = []) {
@@ -147,20 +170,18 @@ function fillReport(report = null, extra = {}) {
   setVal('reportId', report?.id || '');
   setVal('reportTitle', report?.title || '');
   setVal('reportType', report?.type_code || 'intervention');
-  setVal('reportStatus', report?.status || 'draft');
+  setVal('reportStatus', report?.status || 'submitted');
   setVal('reportOccurredAt', report?.occurred_at ? String(report.occurred_at).replace(' ', 'T').slice(0, 16) : '');
+  setVal('reportLocation', report?.location || '');
   setVal('reportAccessScope', report?.access_scope || 'service');
   setVal('reportDivision', report?.division_id || '');
-  setVal('reportMinimumPower', report?.minimum_power_level || 0);
-  setVal('reportMinimumRole', report?.minimum_role_code || '');
-  setVal('reportSummary', report?.summary || '');
   setVal('reportFacts', report?.facts || '');
   setVal('reportActionsTaken', report?.actions_taken || '');
   setVal('reportConclusions', report?.conclusions || '');
   setVal('reportNotes', report?.notes || '');
-  renderDocument(report || {});
   renderLinks(extra);
   renderLogs(extra.logs || []);
+  renderDocument(report || payload());
   showTab('main');
   setEditMode(!report?.id);
   renderReports();
@@ -170,9 +191,7 @@ async function loadReport(id) {
   try {
     const result = await apiGet(`/api/reports.php?action=get&id=${encodeURIComponent(id)}`);
     fillReport(result.report, result);
-  } catch (error) {
-    alert(error.message);
-  }
+  } catch (error) { alert(error.message); }
 }
 
 function payload() {
@@ -180,13 +199,12 @@ function payload() {
     id: Number(val('reportId') || 0),
     title: val('reportTitle'),
     type_code: val('reportType'),
-    status: val('reportStatus'),
+    status: val('reportStatus') || 'submitted',
     occurred_at: val('reportOccurredAt') ? val('reportOccurredAt').replace('T', ' ') + ':00' : '',
+    location: val('reportLocation'),
     access_scope: val('reportAccessScope'),
     division_id: Number(val('reportDivision') || 0),
-    minimum_power_level: Number(val('reportMinimumPower') || 0),
-    minimum_role_code: val('reportMinimumRole'),
-    summary: val('reportSummary'),
+    summary: val('reportFacts').slice(0, 500),
     facts: val('reportFacts'),
     actions_taken: val('reportActionsTaken'),
     conclusions: val('reportConclusions'),
@@ -204,9 +222,42 @@ async function saveReport() {
     setMsg('Rapport sauvegardé.', 'success');
     await loadReports();
     await loadReport(result.id);
-  } catch (error) {
-    setMsg(error.message);
-  }
+  } catch (error) { setMsg(error.message); }
+}
+
+async function lookup(kind, query) {
+  const target = kind === 'citizens' ? 'citizens' : kind === 'vehicles' ? 'vehicles' : 'agents';
+  if (query.trim().length < 2) return [];
+  const result = await apiGet(`/api/reports.php?action=lookup&target=${target}&q=${encodeURIComponent(query.trim())}`);
+  return result.items || [];
+}
+
+function bindLookup(inputId, resultsId, kind) {
+  let timer = null;
+  const input = get(inputId);
+  const results = get(resultsId);
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(async () => {
+      try {
+        const items = await lookup(kind, input.value);
+        results.innerHTML = items.map(item => `<button type="button" class="lookup-item" data-kind="${kind}" data-id="${Number(item.id)}" data-label="${esc(item.label)}" data-meta="${esc(item.meta || '')}"><strong>${esc(item.label)}</strong><span>${esc(item.meta || '')}</span></button>`).join('') || '<p>Aucun résultat.</p>';
+      } catch (error) { results.innerHTML = `<p>${esc(error.message)}</p>`; }
+    }, 250);
+  });
+}
+
+function addLinked(kind, item) {
+  const list = kind === 'citizens' ? linkedCitizens : kind === 'vehicles' ? linkedVehicles : linkedAgents;
+  if (!list.some(existing => Number(existing.id) === Number(item.id))) list.push(item);
+  setLinked(kind, list);
+}
+
+function openPreviewWindow() {
+  const win = window.open('', '_blank');
+  if (!win) return;
+  win.document.write(`<html><head><title>Rapport</title><link rel="stylesheet" href="/reports.css?v=2"></head><body class="report-export-body">${get('reportDocumentView').innerHTML}</body></html>`);
+  win.document.close();
 }
 
 function bindReportPanel() {
@@ -214,25 +265,37 @@ function bindReportPanel() {
   get('saveReportButton').addEventListener('click', saveReport);
   get('editReportButton').addEventListener('click', () => setEditMode(true));
   get('cancelReportButton').addEventListener('click', () => selectedReportId ? loadReport(selectedReportId) : (reportPanel.innerHTML = '<div class="report-empty-state"><p class="mdt-kicker">Rapport</p><h3>Sélectionne ou crée un rapport</h3><p>Le rapport s’affichera ici.</p></div>'));
-  get('printReportButton').addEventListener('click', () => window.print());
-  ['reportTitle','reportType','reportStatus','reportOccurredAt','reportAccessScope','reportSummary','reportFacts','reportActionsTaken','reportConclusions','reportNotes'].forEach(id => {
+  get('previewReportButton').addEventListener('click', () => { renderDocument(payload()); setEditMode(false); showTab('main'); });
+  get('downloadReportButton').addEventListener('click', openPreviewWindow);
+  bindLookup('citizenLookupInput', 'citizenLookupResults', 'citizens');
+  bindLookup('vehicleLookupInput', 'vehicleLookupResults', 'vehicles');
+  bindLookup('agentLookupInput', 'agentLookupResults', 'agents');
+  ['reportTitle','reportType','reportOccurredAt','reportLocation','reportAccessScope','reportFacts','reportActionsTaken','reportConclusions','reportNotes'].forEach(id => {
     get(id)?.addEventListener('input', () => renderDocument(payload()));
     get(id)?.addEventListener('change', () => renderDocument(payload()));
   });
 }
 
-reportsList.addEventListener('click', event => {
-  const row = event.target.closest('.report-row');
-  if (row) loadReport(Number(row.dataset.id));
+reportPanel.addEventListener('click', (event) => {
+  const item = event.target.closest('.lookup-item');
+  if (item) {
+    addLinked(item.dataset.kind, { id: Number(item.dataset.id), label: item.dataset.label, meta: item.dataset.meta });
+    item.closest('.lookup-results').innerHTML = '';
+  }
+  const chip = event.target.closest('.selected-chip');
+  if (chip) {
+    const kind = chip.dataset.kind;
+    const id = Number(chip.dataset.id);
+    const list = kind === 'citizens' ? linkedCitizens : kind === 'vehicles' ? linkedVehicles : linkedAgents;
+    setLinked(kind, list.filter(item => Number(item.id) !== id));
+  }
 });
+
+reportsList.addEventListener('click', event => { const row = event.target.closest('.report-row'); if (row) loadReport(Number(row.dataset.id)); });
 newReportButton.addEventListener('click', () => fillReport(null));
 reportSearchInput.addEventListener('input', () => { clearTimeout(searchTimer); searchTimer = setTimeout(loadReports, 250); });
 
 (async () => {
-  try {
-    await loadMeta();
-    await loadReports();
-  } catch (error) {
-    reportsList.innerHTML = `<p class="reports-empty">${esc(error.message)}</p>`;
-  }
+  try { await loadMeta(); await loadReports(); }
+  catch (error) { reportsList.innerHTML = `<p class="reports-empty">${esc(error.message)}</p>`; }
 })();

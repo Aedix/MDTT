@@ -21,6 +21,37 @@
     if (field) field.value = value ?? '';
   }
 
+  function setLabelText(inputId, text) {
+    const label = getField(inputId)?.closest('label');
+    if (!label) return;
+    const textNode = Array.from(label.childNodes).find((node) => node.nodeType === Node.TEXT_NODE);
+    if (textNode) textNode.textContent = text;
+  }
+
+  function setLabelHidden(inputId, hidden) {
+    const label = getField(inputId)?.closest('label');
+    if (label) label.hidden = hidden;
+  }
+
+  function hideLegacyArrestationOption() {
+    const select = getField('reportType');
+    if (!select || select.value === 'arrestation') return;
+    select.querySelector('option[value="arrestation"]')?.remove();
+  }
+
+  function syncGenericReportFields() {
+    const dossier = isArrestationDossier();
+
+    hideLegacyArrestationOption();
+    setLabelText('reportOccurredAt', dossier ? 'Date / heure de l’arrestation' : 'Date / heure de l’incident');
+    setLabelText('reportLocation', dossier ? 'Lieu de l’interpellation' : 'Emplacement de l’incident');
+    setLabelText('reportFacts', dossier ? 'Récit de l’arrestation' : 'Récit');
+    setLabelText('reportNotes', dossier ? 'Notes complémentaires du dossier' : 'Notes complémentaires');
+
+    setLabelHidden('reportActionsTaken', dossier);
+    setLabelHidden('reportConclusions', dossier);
+  }
+
   function parseStructuredData(report) {
     if (!report?.structured_data) return {};
     if (typeof report.structured_data === 'object') return report.structured_data || {};
@@ -117,7 +148,13 @@
           <label class="wide">Décision / suite donnée<input id="custodyDecision" type="text" placeholder="Mise en cellule - attente validation" /></label>
         </div>
       `;
-      mainPanel.appendChild(box);
+
+      const anchor = getField('reportLocation')?.closest('label') || getField('reportType')?.closest('label');
+      if (anchor && anchor.parentElement === mainPanel) {
+        anchor.insertAdjacentElement('afterend', box);
+      } else {
+        mainPanel.appendChild(box);
+      }
 
       box.querySelectorAll('input, textarea, select').forEach((field) => {
         field.addEventListener('input', () => window.renderDocument?.(window.payload?.() || {}));
@@ -126,6 +163,7 @@
     }
 
     box.hidden = !isArrestationDossier();
+    syncGenericReportFields();
   }
 
   function populateArrestationFields() {

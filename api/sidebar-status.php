@@ -25,6 +25,7 @@ function sidebarStatusClass(string $status): string
         'Transport' => 'status-transport',
         'En attente' => 'status-waiting',
         'Indisponible' => 'status-unavailable',
+        'Hors service' => 'status-unavailable',
         default => 'status-unassigned',
     };
 }
@@ -85,7 +86,7 @@ try {
            AND dum.is_active = 1
            AND du.service_id = :service_id
            AND du.is_active = 1
-         ORDER BY dum.created_at DESC, du.created_at DESC
+         ORDER BY dum.joined_at DESC, du.updated_at DESC, du.created_at DESC
          LIMIT 1'
     );
     $assignmentStatement->execute([
@@ -115,5 +116,8 @@ try {
         'is_on_duty' => true,
     ]);
 } catch (Throwable $exception) {
-    respond(['success' => false, 'message' => 'Erreur serveur.'], 500);
+    respond([
+        'success' => false,
+        'message' => 'Erreur serveur.',
+    ], 500);
 }

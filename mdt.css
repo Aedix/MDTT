@@ -157,6 +157,37 @@ textarea:focus {
   font-size: 0.84rem;
 }
 
+.dispatch-status-dot {
+  width: 10px;
+  height: 10px;
+  display: inline-flex;
+  border-radius: 50%;
+  background: #8b95a7;
+  box-shadow: 0 0 12px rgba(139, 149, 167, 0.25);
+}
+
+.dispatch-status-dot.mini {
+  width: 8px;
+  height: 8px;
+  margin-right: 8px;
+  vertical-align: middle;
+  flex: 0 0 auto;
+}
+
+.mdt-sidebar-footer .dispatch-status-dot.mini {
+  display: inline-flex;
+  vertical-align: -1px;
+}
+
+.status-available { background: #49d17d; box-shadow: 0 0 12px rgba(73, 209, 125, 0.35); }
+.status-patrol { background: #4b97ff; box-shadow: 0 0 12px rgba(75, 151, 255, 0.35); }
+.status-intervention { background: #ff6b6b; box-shadow: 0 0 12px rgba(255, 107, 107, 0.35); }
+.status-pause { background: #f5c542; box-shadow: 0 0 12px rgba(245, 197, 66, 0.35); }
+.status-transport { background: #a78bfa; box-shadow: 0 0 12px rgba(167, 139, 250, 0.35); }
+.status-waiting { background: #fb923c; box-shadow: 0 0 12px rgba(251, 146, 60, 0.35); }
+.status-unavailable { background: #6b7280; box-shadow: 0 0 12px rgba(107, 114, 128, 0.35); }
+.status-unassigned { background: #8b95a7; box-shadow: 0 0 12px rgba(139, 149, 167, 0.25); }
+
 .mdt-main {
   min-width: 0;
 }

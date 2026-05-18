@@ -46,6 +46,7 @@
   let currentClassification = 'internal';
   let currentStatus = 'submitted';
   let lastLogs = [];
+  let filterUiBound = false;
 
   function safe(value) {
     return String(value ?? '')
@@ -130,6 +131,43 @@
     }).join('');
   }
 
+  function compactFilterUi() {
+    const page = reportsPage();
+    const commandCard = document.querySelector('.reports-command-card');
+    const commandBar = document.querySelector('.reports-command-bar');
+    const filterCard = document.querySelector('.reports-filter-card');
+    if (!page || !commandCard || !commandBar || !filterCard) return;
+
+    filterCard.classList.add('reports-filter-drawer');
+    filterCard.querySelector('#filterReportText')?.remove();
+
+    if (!document.querySelector('#toggleReportFilters')) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.id = 'toggleReportFilters';
+      button.className = 'mdt-button-secondary report-filter-toggle';
+      button.textContent = 'Filtres';
+      const newButton = document.querySelector('#newReportButton');
+      commandBar.insertBefore(button, newButton || null);
+      button.addEventListener('click', () => {
+        page.classList.toggle('filters-open');
+        button.classList.toggle('active', page.classList.contains('filters-open'));
+      });
+    }
+
+    if (filterCard.parentElement !== commandCard) {
+      commandCard.appendChild(filterCard);
+    }
+
+    if (!filterUiBound) {
+      filterUiBound = true;
+      document.querySelector('#reportSearchInput')?.addEventListener('input', () => {
+        const firstFilter = document.querySelector('#filterReportType');
+        if (firstFilter) firstFilter.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+    }
+  }
+
   function ensureClassificationBanner() {
     const panel = document.querySelector('.report-panel-inner');
     if (!panel) return;
@@ -165,6 +203,8 @@
 
   function refreshWorkflowState() {
     const active = workflowKey(currentStatus || document.querySelector('#reportStatus')?.value || 'submitted');
+    const seen = new Set();
+
     document.querySelectorAll('.workflow-step').forEach((step) => {
       const text = step.textContent.trim().toLowerCase();
       const isSubmitted = text.includes('attente') || text === 'soumis' || text.includes('révision');
@@ -175,12 +215,17 @@
         : text.includes('archivé') ? 'archived'
         : '';
 
-      if (text === 'soumis' || text.includes('révision')) {
-        if (step.dataset.normalized !== '1') step.childNodes.forEach((node) => {
+      if (key === 'submitted') {
+        step.childNodes.forEach((node) => {
           if (node.nodeType === Node.TEXT_NODE) node.textContent = ' En attente CS';
         });
-        step.dataset.normalized = '1';
       }
+
+      if (key && seen.has(key)) {
+        step.remove();
+        return;
+      }
+      if (key) seen.add(key);
 
       step.classList.toggle('active', key === active);
       step.classList.toggle('workflow-draft', key === 'draft');
@@ -194,6 +239,7 @@
   function refreshConsultationCards() {
     ensureClassificationBanner();
     refreshWorkflowState();
+    compactFilterUi();
   }
 
   function jumpToLinkedCitizen(id, vehicleId = '') {
@@ -278,6 +324,8 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     closeBlankFocusMode();
-    setTimeout(closeBlankFocusMode, 300);
+    setTimeout(() => { closeBlankFocusMode(); compactFilterUi(); refreshWorkflowState(); }, 300);
   });
+
+  [700, 1200, 2000].forEach((delay) => setTimeout(() => { compactFilterUi(); refreshWorkflowState(); }, delay));
 })();

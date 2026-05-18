@@ -7,14 +7,60 @@ function mdtRichEscape(string $value): string
     return htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
 }
 
+function mdtRichAllowedSpanClasses(): array
+{
+    return [
+        'mdt-rich-color-red',
+        'mdt-rich-color-orange',
+        'mdt-rich-color-yellow',
+        'mdt-rich-color-green',
+        'mdt-rich-color-blue',
+        'mdt-rich-color-purple',
+        'mdt-rich-highlight-yellow',
+        'mdt-rich-highlight-green',
+        'mdt-rich-highlight-blue',
+        'mdt-rich-highlight-red',
+    ];
+}
+
 function mdtRichHasHtml(string $value): bool
 {
-    return preg_match('/<\/?(p|b|strong|i|em|u|s|ul|ol|li|br)\b/i', $value) === 1;
+    return preg_match('/<\/?(p|b|strong|i|em|u|s|ul|ol|li|br|span)\b/i', $value) === 1;
 }
 
 function mdtRichHasBbCode(string $value): bool
 {
-    return preg_match('/\[(b|strong|i|em|u|s|strike|br|list|list=1|ul|ol|\*)\b/i', $value) === 1;
+    return preg_match('/\[(b|strong|i|em|u|s|strike|br|list|list=1|ul|ol|\*|color|highlight|mark|bg)\b/i', $value) === 1;
+}
+
+function mdtRichBbClass(string $type, string $value): ?string
+{
+    $normalized = mb_strtolower(trim($value));
+    $colors = [
+        'red' => 'mdt-rich-color-red',
+        'rouge' => 'mdt-rich-color-red',
+        'orange' => 'mdt-rich-color-orange',
+        'yellow' => 'mdt-rich-color-yellow',
+        'jaune' => 'mdt-rich-color-yellow',
+        'green' => 'mdt-rich-color-green',
+        'vert' => 'mdt-rich-color-green',
+        'blue' => 'mdt-rich-color-blue',
+        'bleu' => 'mdt-rich-color-blue',
+        'purple' => 'mdt-rich-color-purple',
+        'violet' => 'mdt-rich-color-purple',
+    ];
+    $highlights = [
+        'yellow' => 'mdt-rich-highlight-yellow',
+        'jaune' => 'mdt-rich-highlight-yellow',
+        'green' => 'mdt-rich-highlight-green',
+        'vert' => 'mdt-rich-highlight-green',
+        'blue' => 'mdt-rich-highlight-blue',
+        'bleu' => 'mdt-rich-highlight-blue',
+        'red' => 'mdt-rich-highlight-red',
+        'rouge' => 'mdt-rich-highlight-red',
+    ];
+
+    return $type === 'highlight' ? ($highlights[$normalized] ?? null) : ($colors[$normalized] ?? null);
 }
 
 function mdtRichConvertList(string $html, string $pattern, string $tag): string
@@ -44,6 +90,16 @@ function mdtRichBbCodeToHtml(string $value): string
     $html = preg_replace('/\[br\s*\/\]/i', '<br>', $html) ?? $html;
     $html = preg_replace('/\[br\]/i', '<br>', $html) ?? $html;
 
+    $html = preg_replace_callback('/\[color=([^\]]+)\]([\s\S]*?)\[\/color\]/i', static function (array $matches): string {
+        $class = mdtRichBbClass('color', (string) $matches[1]);
+        return $class ? '<span class="' . $class . '">' . $matches[2] . '</span>' : (string) $matches[2];
+    }, $html) ?? $html;
+
+    $html = preg_replace_callback('/\[(highlight|mark|bg)=([^\]]+)\]([\s\S]*?)\[\/\1\]/i', static function (array $matches): string {
+        $class = mdtRichBbClass('highlight', (string) $matches[2]);
+        return $class ? '<span class="' . $class . '">' . $matches[3] . '</span>' : (string) $matches[3];
+    }, $html) ?? $html;
+
     $html = mdtRichConvertList($html, '/\[list=1\]([\s\S]*?)\[\/list\]/i', 'ol');
     $html = mdtRichConvertList($html, '/\[ol\]([\s\S]*?)\[\/ol\]/i', 'ol');
     $html = mdtRichConvertList($html, '/\[list\]([\s\S]*?)\[\/list\]/i', 'ul');
@@ -64,14 +120,29 @@ function mdtRichPlainTextToHtml(string $value): string
 
 function mdtRichSanitizeHtml(string $html): string
 {
-    $html = strip_tags($html, '<p><strong><b><em><i><u><s><ul><ol><li><br>');
-    $html = preg_replace('/<([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', $html) ?? $html;
+    $html = strip_tags($html, '<p><strong><b><em><i><u><s><ul><ol><li><br><span>');
+
+    $html = preg_replace_callback('/<span\b([^>]*)>/i', static function (array $matches): string {
+        $attrs = (string) ($matches[1] ?? '');
+        if (!preg_match('/class\s*=\s*(["\'])(.*?)\1/i', $attrs, $classMatches)) {
+            return '<span>';
+        }
+
+        $allowed = mdtRichAllowedSpanClasses();
+        $classes = preg_split('/\s+/', trim((string) $classMatches[2]));
+        $classes = array_values(array_unique(array_filter($classes, static fn (string $class): bool => in_array($class, $allowed, true))));
+
+        return $classes ? '<span class="' . implode(' ', $classes) . '">' : '<span>';
+    }, $html) ?? $html;
+
+    $html = preg_replace('/<(?!span\b)([a-z][a-z0-9]*)\b[^>]*>/i', '<$1>', $html) ?? $html;
     $html = preg_replace('/<\s*\/\s*([a-z][a-z0-9]*)\s*>/i', '</$1>', $html) ?? $html;
     $html = preg_replace('/<br\s*>/i', '<br>', $html) ?? $html;
     $html = preg_replace('/<b>/i', '<strong>', $html) ?? $html;
     $html = preg_replace('/<\/b>/i', '</strong>', $html) ?? $html;
     $html = preg_replace('/<i>/i', '<em>', $html) ?? $html;
     $html = preg_replace('/<\/i>/i', '</em>', $html) ?? $html;
+    $html = preg_replace('/<span>\s*<\/span>/i', '', $html) ?? $html;
 
     return trim($html);
 }

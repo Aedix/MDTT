@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/db.php';
+require_once __DIR__ . '/../includes/permissions.php';
 require_once __DIR__ . '/../includes/report_access.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -41,7 +42,43 @@ function structuredJson(array $data): ?string
         return null;
     }
 
+    unset($value['arrestation_status']);
+
     return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+}
+
+function canEditReportStatus(array $user): bool
+{
+    $technicalRole = str_replace(['-', ' '], '_', strtolower(trim((string) ($user['role'] ?? ''))));
+    $rankCode = str_replace(['-', ' '], '_', strtolower(trim((string) ($user['active_rank_code'] ?? $user['rank_code'] ?? $user['active_rank_name'] ?? $user['rank_name'] ?? ''))));
+    $rankName = strtolower(trim((string) ($user['active_rank_name'] ?? $user['rank_name'] ?? '')));
+
+    return in_array($technicalRole, ['super_admin', 'superadmin'], true)
+        || userHasPermission($user, '*')
+        || userHasPermission($user, 'reports.status.update')
+        || userHasMinimumRole($user, 'chief')
+        || str_contains($rankCode, 'director')
+        || str_contains($rankName, 'director')
+        || str_contains($rankName, 'command staff');
+}
+
+function resolveReportStatus(array $data, ?array $existing, array $user): string
+{
+    $allowedStatuses = ['draft', 'submitted', 'validated', 'archived', 'rejected'];
+    $requestedStatus = t($data, 'status', 40) ?? 'submitted';
+    if (!in_array($requestedStatus, $allowedStatuses, true)) {
+        $requestedStatus = 'submitted';
+    }
+
+    if (canEditReportStatus($user)) {
+        return $requestedStatus;
+    }
+
+    if ($existing) {
+        return (string) ($existing['status'] ?? 'submitted');
+    }
+
+    return 'submitted';
 }
 
 function reportLog(PDO $pdo, int $reportId, string $action, array $details, int $userId): void
@@ -201,10 +238,7 @@ try {
         $accessScope = t($data, 'access_scope', 40) ?? 'service';
         if (!in_array($accessScope, $allowedScopes, true)) $accessScope = 'service';
 
-        $allowedStatuses = ['draft', 'submitted', 'validated', 'archived', 'rejected'];
-        $status = t($data, 'status', 40) ?? 'submitted';
-        if (!in_array($status, $allowedStatuses, true)) $status = 'submitted';
-
+        $status = resolveReportStatus($data, $existing, $user);
         $ownerServiceCode = $existing['service_code'] ?? $serviceCode;
 
         $payload = [

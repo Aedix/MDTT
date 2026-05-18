@@ -34,6 +34,16 @@ function t(array $data, string $key, int $max = 5000): ?string
     return $value === '' ? null : mb_substr($value, 0, $max);
 }
 
+function structuredJson(array $data): ?string
+{
+    $value = $data['structured_data'] ?? null;
+    if (!is_array($value)) {
+        return null;
+    }
+
+    return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+}
+
 function reportLog(PDO $pdo, int $reportId, string $action, array $details, int $userId): void
 {
     $statement = $pdo->prepare('INSERT INTO report_logs (report_id, action, details, created_by) VALUES (:report_id, :action, :details, :created_by)');
@@ -203,6 +213,7 @@ try {
             'actions_taken' => t($data, 'actions_taken', 8000),
             'conclusions' => t($data, 'conclusions', 8000),
             'notes' => t($data, 'notes', 6000),
+            'structured_data' => structuredJson($data),
             'updated_by' => (int) $user['id'],
         ];
 
@@ -211,13 +222,13 @@ try {
             if (!$existing) respond(['success' => false, 'message' => 'Rapport introuvable.'], 404);
             if (!canUserAccessReport($user, $existing, $pdo)) respond(['success' => false, 'message' => 'Accès refusé.'], 403);
             $payload['id'] = $id;
-            $statement = $pdo->prepare('UPDATE reports SET title = :title, type_code = :type_code, status = :status, service_code = :service_code, division_id = :division_id, access_scope = :access_scope, minimum_role_code = :minimum_role_code, minimum_power_level = :minimum_power_level, occurred_at = :occurred_at, location = :location, summary = :summary, facts = :facts, actions_taken = :actions_taken, conclusions = :conclusions, notes = :notes, updated_by = :updated_by WHERE id = :id');
+            $statement = $pdo->prepare('UPDATE reports SET title = :title, type_code = :type_code, status = :status, service_code = :service_code, division_id = :division_id, access_scope = :access_scope, minimum_role_code = :minimum_role_code, minimum_power_level = :minimum_power_level, occurred_at = :occurred_at, location = :location, summary = :summary, facts = :facts, actions_taken = :actions_taken, conclusions = :conclusions, notes = :notes, structured_data = :structured_data, updated_by = :updated_by WHERE id = :id');
             $statement->execute($payload);
             reportLog($pdo, $id, 'update', $payload, (int) $user['id']);
         } else {
             $payload['report_number'] = generateReportNumber($pdo, $serviceCode, $type);
             $payload['created_by'] = (int) $user['id'];
-            $statement = $pdo->prepare('INSERT INTO reports (report_number, title, type_code, status, service_code, division_id, access_scope, minimum_role_code, minimum_power_level, occurred_at, location, summary, facts, actions_taken, conclusions, notes, created_by, updated_by) VALUES (:report_number, :title, :type_code, :status, :service_code, :division_id, :access_scope, :minimum_role_code, :minimum_power_level, :occurred_at, :location, :summary, :facts, :actions_taken, :conclusions, :notes, :created_by, :updated_by)');
+            $statement = $pdo->prepare('INSERT INTO reports (report_number, title, type_code, status, service_code, division_id, access_scope, minimum_role_code, minimum_power_level, occurred_at, location, summary, facts, actions_taken, conclusions, notes, structured_data, created_by, updated_by) VALUES (:report_number, :title, :type_code, :status, :service_code, :division_id, :access_scope, :minimum_role_code, :minimum_power_level, :occurred_at, :location, :summary, :facts, :actions_taken, :conclusions, :notes, :structured_data, :created_by, :updated_by)');
             $statement->execute($payload);
             $id = (int) $pdo->lastInsertId();
             reportLog($pdo, $id, 'create', $payload, (int) $user['id']);

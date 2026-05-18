@@ -1,7 +1,73 @@
 (() => {
-  const EDITOR_IDS = ['reportFacts', 'reportNotes'];
+  const EDITOR_IDS = ['reportFacts', 'reportActionsTaken', 'reportConclusions', 'reportNotes'];
   let activeTextarea = null;
   let activeEditor = null;
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
+  function bbCodeToHtml(value) {
+    let html = escapeHtml(value || '');
+
+    html = html
+      .replace(/\[b\]([\s\S]*?)\[\/b\]/gi, '<strong>$1</strong>')
+      .replace(/\[strong\]([\s\S]*?)\[\/strong\]/gi, '<strong>$1</strong>')
+      .replace(/\[i\]([\s\S]*?)\[\/i\]/gi, '<em>$1</em>')
+      .replace(/\[em\]([\s\S]*?)\[\/em\]/gi, '<em>$1</em>')
+      .replace(/\[u\]([\s\S]*?)\[\/u\]/gi, '<u>$1</u>')
+      .replace(/\[s\]([\s\S]*?)\[\/s\]/gi, '<s>$1</s>')
+      .replace(/\[strike\]([\s\S]*?)\[\/strike\]/gi, '<s>$1</s>')
+      .replace(/\[br\s*\/\]/gi, '<br>')
+      .replace(/\[br\]/gi, '<br>');
+
+    html = html.replace(/\[list=1\]([\s\S]*?)\[\/list\]/gi, (_, content) => {
+      const items = content
+        .split(/\[\*\]/g)
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .map((item) => `<li>${item}</li>`)
+        .join('');
+      return `<ol>${items}</ol>`;
+    });
+
+    html = html.replace(/\[ol\]([\s\S]*?)\[\/ol\]/gi, (_, content) => {
+      const items = content
+        .split(/\[\*\]/g)
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .map((item) => `<li>${item}</li>`)
+        .join('');
+      return `<ol>${items}</ol>`;
+    });
+
+    html = html.replace(/\[list\]([\s\S]*?)\[\/list\]/gi, (_, content) => {
+      const items = content
+        .split(/\[\*\]/g)
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .map((item) => `<li>${item}</li>`)
+        .join('');
+      return `<ul>${items}</ul>`;
+    });
+
+    html = html.replace(/\[ul\]([\s\S]*?)\[\/ul\]/gi, (_, content) => {
+      const items = content
+        .split(/\[\*\]/g)
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .map((item) => `<li>${item}</li>`)
+        .join('');
+      return `<ul>${items}</ul>`;
+    });
+
+    return html;
+  }
 
   function sanitizeRichHtml(html) {
     const template = document.createElement('template');
@@ -25,15 +91,27 @@
       .trim();
   }
 
+  function hasHtml(value) {
+    return /<\/?(p|b|strong|i|em|u|s|ul|ol|li|br)\b/i.test(String(value || ''));
+  }
+
+  function hasBBCode(value) {
+    return /\[(b|strong|i|em|u|s|strike|br|list|list=1|ul|ol|\*)\b/i.test(String(value || ''));
+  }
+
+  function plainTextToHtml(value) {
+    return String(value || '')
+      .split(/\n{2,}/)
+      .map((block) => `<p>${escapeHtml(block).replace(/\n/g, '<br>')}</p>`)
+      .join('');
+  }
+
   function textToRichHtml(value) {
     const raw = String(value || '').trim();
     if (!raw) return '';
-    if (/<\/?(p|b|strong|i|em|u|s|ul|ol|li|br)\b/i.test(raw)) return sanitizeRichHtml(raw);
-
-    return raw
-      .split(/\n{2,}/)
-      .map((block) => `<p>${block.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replace(/\n/g, '<br>')}</p>`)
-      .join('');
+    if (hasHtml(raw)) return sanitizeRichHtml(raw);
+    if (hasBBCode(raw)) return sanitizeRichHtml(bbCodeToHtml(raw));
+    return sanitizeRichHtml(plainTextToHtml(raw));
   }
 
   function richToPlainText(html) {
@@ -43,7 +121,7 @@
   }
 
   function syncTextarea(textarea, editor) {
-    textarea.value = sanitizeRichHtml(editor.innerHTML);
+    textarea.value = textToRichHtml(editor.innerHTML);
     textarea.dispatchEvent(new Event('input', { bubbles: true }));
   }
 
@@ -88,6 +166,7 @@
     shell.appendChild(bar);
     shell.appendChild(surface);
     textarea.insertAdjacentElement('afterend', shell);
+    textarea.value = textToRichHtml(textarea.value);
 
     surface.addEventListener('focus', () => {
       activeTextarea = textarea;
@@ -199,7 +278,7 @@
     const modalSurface = modal.querySelector('.rich-editor-modal-body .rich-editor-surface');
 
     if (textarea && sourceSurface && modalSurface) {
-      sourceSurface.innerHTML = sanitizeRichHtml(modalSurface.innerHTML);
+      sourceSurface.innerHTML = textToRichHtml(modalSurface.innerHTML);
       syncTextarea(textarea, sourceSurface);
     }
 
@@ -214,11 +293,13 @@
       buildEditor(textarea);
       const surface = textarea.nextElementSibling?.querySelector('.rich-editor-surface');
       if (surface && document.activeElement !== surface) surface.innerHTML = textToRichHtml(textarea.value);
+      textarea.value = textToRichHtml(textarea.value);
     });
   }
 
   window.MDTRichText = {
     sanitize: sanitizeRichHtml,
+    bbCodeToHtml,
     toHtml: textToRichHtml,
     toText: richToPlainText,
     refresh: refreshEditors,

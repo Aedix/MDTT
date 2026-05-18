@@ -75,6 +75,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
     </div>
   </template>
   <script>const logoutButton=document.querySelector('#logoutButton');logoutButton.addEventListener('click',async()=>{const response=await fetch('/api/logout.php',{method:'POST',credentials:'same-origin'});const result=await response.json();window.location.href=result.redirect||'/index.html';});</script>
+  <script src="/mdt-sidebar.js?v=1"></script>
   <script src="/reports-editor.js?v=1"></script>
   <script src="/search.js?v=7"></script>
   <script src="/search-status-fixes.js?v=1"></script>

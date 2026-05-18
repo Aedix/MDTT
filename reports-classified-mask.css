@@ -1,0 +1,31 @@
+.rich-editor-redact,
+.rich-editor-classified {
+  min-width: 40px !important;
+  background: #050505 !important;
+  color: #050505 !important;
+  border-color: #334155 !important;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, .08);
+}
+
+.mdt-rich-redacted,
+.mdt-rich-classified {
+  display: inline-block;
+  min-width: 4.5em;
+  min-height: 1em;
+  background: #050505;
+  color: #050505 !important;
+  border-radius: 2px;
+  vertical-align: -0.12em;
+  user-select: none;
+}
+
+.rich-editor-surface .mdt-rich-redacted,
+.rich-editor-surface .mdt-rich-classified {
+  color: rgba(255, 255, 255, .08) !important;
+  caret-color: #fff;
+}
+
+.fib-template-rich .mdt-rich-redacted,
+.fib-template-rich .mdt-rich-classified {
+  color: #050505 !important;
+}

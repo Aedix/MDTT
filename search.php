@@ -78,6 +78,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   <script src="/mdt-sidebar.js?v=1"></script>
   <script src="/reports-editor.js?v=1"></script>
   <script src="/search.js?v=7"></script>
+  <script src="/search-deep-link.js?v=1"></script>
   <script src="/search-status-fixes.js?v=1"></script>
   <script src="/search-linked-sections.js?v=2"></script>
   <script src="/search-service-notes.js?v=1"></script>

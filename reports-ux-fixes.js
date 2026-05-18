@@ -16,6 +16,7 @@
   };
 
   let currentClassification = 'internal';
+  let lastLogs = [];
 
   function safe(value) {
     return String(value ?? '')
@@ -26,12 +27,34 @@
       .replaceAll("'", '&#039;');
   }
 
+  function reportsPage() {
+    return document.querySelector('.reports-page');
+  }
+
+  function closeBlankFocusMode() {
+    if (!document.querySelector('.report-panel-inner')) {
+      reportsPage()?.classList.remove('report-focus-mode');
+    }
+  }
+
   function labelClassification(value) {
     return CLASSIFICATION_LABELS[String(value || 'internal')] || value || 'Interne service';
   }
 
   function parseDetails(text) {
     try { return JSON.parse(text || '{}'); } catch { return {}; }
+  }
+
+  function statusLabel(value) {
+    const labels = {
+      draft: 'Brouillon',
+      submitted: 'En attente CS',
+      review: 'En attente CS',
+      validated: 'Validé',
+      rejected: 'Rejeté',
+      archived: 'Archivé',
+    };
+    return labels[String(value || '')] || value || 'Non renseigné';
   }
 
   function translateLogAction(action, details = {}) {
@@ -48,26 +71,15 @@
     return LOG_LABELS[action] || String(action || 'Action MDT');
   }
 
-  function statusLabel(value) {
-    const labels = {
-      draft: 'Brouillon',
-      submitted: 'Soumis',
-      review: 'En révision CS',
-      validated: 'Validé',
-      rejected: 'Rejeté',
-      archived: 'Archivé',
-    };
-    return labels[String(value || '')] || value || 'Non renseigné';
-  }
-
-  function patchLogs(rawLogs = []) {
+  function patchLogs(rawLogs = lastLogs) {
     const logsView = document.querySelector('#reportLogsView');
     if (!logsView) return;
-    if (!rawLogs.length) {
+    lastLogs = Array.isArray(rawLogs) ? rawLogs : [];
+    if (!lastLogs.length) {
       logsView.innerHTML = '<p class="reports-empty">Aucun historique.</p>';
       return;
     }
-    logsView.innerHTML = rawLogs.map((log) => {
+    logsView.innerHTML = lastLogs.map((log) => {
       const details = parseDetails(log.details);
       return `<div class="report-log readable-log">
         <strong>${safe(translateLogAction(log.action, details))}</strong>
@@ -87,16 +99,11 @@
     document.querySelectorAll('.workflow-step').forEach((step) => {
       const text = step.textContent.trim().toLowerCase();
       step.classList.toggle('workflow-draft', text.includes('brouillon'));
-      step.classList.toggle('workflow-submitted', text === 'soumis');
+      step.classList.toggle('workflow-submitted', text.includes('attente') || text === 'soumis');
       step.classList.toggle('workflow-review', text.includes('révision'));
       step.classList.toggle('workflow-validated', text.includes('validé'));
       step.classList.toggle('workflow-rejected', text.includes('rejeté'));
       step.classList.toggle('workflow-archived', text.includes('archivé'));
-    });
-
-    document.querySelectorAll('.report-timeline-item strong').forEach((strong) => {
-      const action = strong.textContent.trim();
-      strong.textContent = LOG_LABELS[action] || action;
     });
   }
 
@@ -119,6 +126,15 @@
     };
   }
 
+  const baseRenderDocument = window.renderDocument;
+  if (typeof baseRenderDocument === 'function') {
+    window.renderDocument = function renderDocumentUxFixed(report = {}) {
+      currentClassification = report?.classification_level || currentClassification || 'internal';
+      baseRenderDocument(report);
+      setTimeout(refreshConsultationCards, 30);
+    };
+  }
+
   const baseRenderLinks = window.renderLinks;
   if (typeof baseRenderLinks === 'function') {
     window.renderLinks = function renderLinksUxFixed(data = {}) {
@@ -135,6 +151,11 @@
   }
 
   document.addEventListener('click', (event) => {
+    if (event.target.closest('.report-row') || event.target.closest('#newReportButton')) {
+      reportsPage()?.classList.remove('report-focus-mode');
+      return;
+    }
+
     const citizen = event.target.closest('[data-open-citizen]');
     if (citizen) {
       event.preventDefault();
@@ -153,6 +174,8 @@
     }
   }, true);
 
-  new MutationObserver(() => refreshConsultationCards()).observe(document.body, { childList: true, subtree: true });
-  setInterval(refreshConsultationCards, 1000);
+  document.addEventListener('DOMContentLoaded', () => {
+    closeBlankFocusMode();
+    setTimeout(closeBlankFocusMode, 300);
+  });
 })();

@@ -54,8 +54,12 @@
     .fib-template-grid > div { padding: 4px; border-right: 1px solid #111; min-width: 0; }
     .fib-template-grid > div:last-child { border-right: 0; }
     .fib-template-row, .fib-template-block { border: 1px solid #111; border-top: 0; padding: 4px; }
-    .fib-report-template span { display: block; font-weight: 900; font-size: 8.4pt; margin-bottom: 3px; }
+    .fib-report-template span { font-weight: inherit; font-size: inherit; margin-bottom: 0; }
+    .fib-report-template > .fib-template-grid span,
+    .fib-report-template > .fib-template-row span,
+    .fib-report-template > .fib-template-block > span { display: block; font-weight: 900; font-size: 8.4pt; margin-bottom: 3px; }
     .fib-report-template strong { display: block; border: 1px solid #111; padding: 3px 4px; min-height: 17px; background: rgba(255,255,255,.12); font-size: 8.8pt; overflow-wrap: anywhere; }
+    .fib-template-rich strong { display: inline; border: 0; padding: 0; min-height: 0; background: transparent; font-size: inherit; }
     .fib-template-block p, .fib-template-rich { border: 1px solid #111; margin: 0; padding: 5px; background: rgba(255,255,255,.08); font-size: 8.8pt; line-height: 1.15; }
     .fib-template-block p { white-space: pre-wrap; min-height: 80mm; }
     .fib-template-rich { min-height: 80mm; white-space: normal; }
@@ -64,6 +68,17 @@
     .fib-template-rich li { margin: 0 0 2px; }
     .fib-template-block.small p, .fib-template-block.small .fib-template-rich { min-height: 14mm; }
     .fib-template-block.signature p, .fib-template-block.signature .fib-template-rich { min-height: 18mm; }
+
+    .mdt-rich-color-red { color: #b91c1c; }
+    .mdt-rich-color-orange { color: #c2410c; }
+    .mdt-rich-color-yellow { color: #a16207; }
+    .mdt-rich-color-green { color: #15803d; }
+    .mdt-rich-color-blue { color: #1d4ed8; }
+    .mdt-rich-color-purple { color: #7e22ce; }
+    .mdt-rich-highlight-yellow { background: rgba(250, 204, 21, .48); color: inherit; padding: 0 2px; border-radius: 2px; }
+    .mdt-rich-highlight-green { background: rgba(34, 197, 94, .32); color: inherit; padding: 0 2px; border-radius: 2px; }
+    .mdt-rich-highlight-blue { background: rgba(59, 130, 246, .32); color: inherit; padding: 0 2px; border-radius: 2px; }
+    .mdt-rich-highlight-red { background: rgba(239, 68, 68, .34); color: inherit; padding: 0 2px; border-radius: 2px; }
 
     .arrestation-document-template { padding: 5.5mm !important; font-size: 8.8pt; }
     .arrestation-document-template .fib-template-header { padding: 5px 16px; }

@@ -48,7 +48,7 @@
     };
   }
 
-  function serviceInfo(report) {
+  function serviceInfo(report = {}) {
     const serviceCode = report.service_code || currentReportServiceCode || activeServiceCode?.() || 'MDT';
     const serviceName = report.service_name || currentReportServiceName || activeServiceName?.() || serviceCode;
     const storedLogo = report.service_logo_path || currentReportServiceLogo || '';
@@ -107,10 +107,10 @@
         </div>
         <div class="report-form-grid two arrestation-grid">
           <label>Matricule agent<input id="arrestingMatricule" type="text" placeholder="FIB-01" /></label>
-          <label>Statut du dossier<select id="arrestationStatus"><option>Soumis</option><option>Brouillon</option><option>En attente validation</option><option>Validé</option><option>Classé</option><option>Archivé</option></select></label>
+          <label>Statut du dossier<select id="arrestationStatus"><option>Soumis</option><option>Brouillon</option><option>En attente validation</option><option>Validé</option><option>Classé</option><option>Archivé</option><option>Non renseigné</option></select></label>
           <label class="wide">Motif principal<input id="mainCharge" type="text" placeholder="Refus d'obtempérer / port d'arme illégal" /></label>
           <label>Droits lus<select id="rightsRead"><option>Oui</option><option>Non</option><option>Non renseigné</option></select></label>
-          <label>Heure droits lus<input id="rightsTime" type="time" /></label>
+          <label>Heure de lecture des droits<input id="rightsTime" type="time" /></label>
           <label>Fouille effectuée<select id="searchDone"><option>Oui</option><option>Non</option><option>Non renseigné</option></select></label>
           <label>Objets saisis<input id="seizedItems" type="text" placeholder="Pistolet 9mm, chargeur..." /></label>
           <label class="wide">Chefs d'accusation retenus<textarea id="chargesList" rows="4" placeholder="Un chef d'accusation par ligne"></textarea></label>
@@ -141,8 +141,9 @@
     setFieldValue('custodyDecision', arrestationData.custody_decision || '');
   }
 
-  function renderArrestationDocument(report) {
-    const data = { ...arrestationData, ...(report.structured_data && typeof report.structured_data === 'object' ? report.structured_data : {}) };
+  function renderArrestationDocument(report = {}) {
+    const structuredData = typeof report.structured_data === 'object' && report.structured_data ? report.structured_data : {};
+    const data = { ...arrestationData, ...structuredData };
     if (isArrestationDossier()) Object.assign(data, arrestationPayloadData());
 
     const { serviceCode, serviceName, logo } = serviceInfo(report);
@@ -203,9 +204,9 @@
     `;
   }
 
-  window.renderDocument = function renderDocumentWithArrestation(report) {
+  window.renderDocument = function renderDocumentWithArrestation(report = {}) {
     if (isArrestationDossier(report)) {
-      renderArrestationDocument(report || {});
+      renderArrestationDocument(report);
       return;
     }
     baseRenderDocument(report);

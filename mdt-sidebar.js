@@ -18,6 +18,18 @@
     }
   }
 
+  function enableLink(link, href, activePath) {
+    if (!link) return;
+    link.href = href;
+    link.classList.remove('disabled');
+    link.querySelector('.mdt-placeholder')?.remove();
+
+    if (window.location.pathname === activePath) {
+      document.querySelectorAll('.mdt-nav-link').forEach((navLink) => navLink.classList.remove('active'));
+      link.classList.add('active');
+    }
+  }
+
   function ensureSeizuresLink() {
     const nav = document.querySelector('.mdt-nav');
     if (!nav || linkByText(['Saisies'])) return;
@@ -37,12 +49,8 @@
     setLinkLabel(linkByText(['Dispatch']), 'Effectifs');
     ensureSeizuresLink();
 
-    const reports = linkByText(['Rapports']);
-    if (reports && reports.getAttribute('href') === '#') {
-      reports.href = '/reports.php';
-      reports.classList.remove('disabled');
-      reports.querySelector('.mdt-placeholder')?.remove();
-    }
+    enableLink(linkByText(['Dossiers']), '/dossiers.php', '/dossiers.php');
+    enableLink(linkByText(['Rapports']), '/reports.php', '/reports.php');
   }
 
   async function refreshSidebarStatus() {

@@ -42,7 +42,7 @@ try {
     $citizens = $pdo->prepare('SELECT c.id, c.first_name, c.last_name, rc.relation_type FROM report_citizens rc INNER JOIN citizens c ON c.id = rc.citizen_id WHERE rc.report_id = ? ORDER BY c.last_name ASC, c.first_name ASC');
     $citizens->execute([$id]);
 
-    $vehicles = $pdo->prepare('SELECT v.id, v.model, v.plate, rv.relation_type FROM report_vehicles rv INNER JOIN citizen_vehicles v ON v.id = rv.vehicle_id WHERE rv.report_id = ? ORDER BY v.model ASC, v.plate ASC');
+    $vehicles = $pdo->prepare('SELECT v.id, v.citizen_id, v.model, v.plate, rv.relation_type FROM report_vehicles rv INNER JOIN citizen_vehicles v ON v.id = rv.vehicle_id WHERE rv.report_id = ? ORDER BY v.model ASC, v.plate ASC');
     $vehicles->execute([$id]);
 
     $agents = $pdo->prepare('SELECT u.id, u.username, ra.relation_type FROM report_agents ra INNER JOIN users u ON u.id = ra.user_id WHERE ra.report_id = ? ORDER BY u.username ASC');

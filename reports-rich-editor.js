@@ -2,7 +2,8 @@
   const EDITOR_IDS = ['reportFacts', 'reportActionsTaken', 'reportConclusions', 'reportNotes'];
   const TEXT_COLOR_CLASSES = ['mdt-rich-color-red', 'mdt-rich-color-orange', 'mdt-rich-color-yellow', 'mdt-rich-color-green', 'mdt-rich-color-blue', 'mdt-rich-color-purple'];
   const HIGHLIGHT_CLASSES = ['mdt-rich-highlight-yellow', 'mdt-rich-highlight-green', 'mdt-rich-highlight-blue', 'mdt-rich-highlight-red'];
-  const ALLOWED_SPAN_CLASSES = new Set([...TEXT_COLOR_CLASSES, ...HIGHLIGHT_CLASSES]);
+  const REDACTION_CLASSES = ['mdt-rich-redacted'];
+  const ALLOWED_SPAN_CLASSES = new Set([...TEXT_COLOR_CLASSES, ...HIGHLIGHT_CLASSES, ...REDACTION_CLASSES]);
   let activeTextarea = null;
   let activeEditor = null;
   let refreshQueued = false;
@@ -48,6 +49,8 @@
       .replace(/\[u\]([\s\S]*?)\[\/u\]/gi, '<u>$1</u>')
       .replace(/\[s\]([\s\S]*?)\[\/s\]/gi, '<s>$1</s>')
       .replace(/\[strike\]([\s\S]*?)\[\/strike\]/gi, '<s>$1</s>')
+      .replace(/\[secret\]([\s\S]*?)\[\/secret\]/gi, '<span class="mdt-rich-redacted">$1</span>')
+      .replace(/\[redacted\]([\s\S]*?)\[\/redacted\]/gi, '<span class="mdt-rich-redacted">$1</span>')
       .replace(/\[br\s*\/\]/gi, '<br>')
       .replace(/\[br\]/gi, '<br>');
 
@@ -130,7 +133,7 @@
   }
 
   function hasBBCode(value) {
-    return /\[(b|strong|i|em|u|s|strike|br|list|list=1|ul|ol|\*|color|highlight|mark|bg)\b/i.test(String(value || ''));
+    return /\[(b|strong|i|em|u|s|strike|br|list|list=1|ul|ol|\*|color|highlight|mark|bg|secret|redacted)\b/i.test(String(value || ''));
   }
 
   function plainTextToHtml(value) {
@@ -180,7 +183,12 @@
   }
 
   function cleanClassesInFragment(fragment, group) {
-    const classes = group === 'highlight' ? HIGHLIGHT_CLASSES : TEXT_COLOR_CLASSES;
+    let classes = [];
+    if (group === 'highlight') classes = HIGHLIGHT_CLASSES;
+    else if (group === 'color') classes = TEXT_COLOR_CLASSES;
+    else if (group === 'redaction') classes = REDACTION_CLASSES;
+    else classes = [...TEXT_COLOR_CLASSES, ...HIGHLIGHT_CLASSES, ...REDACTION_CLASSES];
+
     fragment.querySelectorAll?.('span').forEach((span) => {
       classes.forEach((className) => span.classList.remove(className));
       if (!span.getAttribute('class')) span.replaceWith(...Array.from(span.childNodes));
@@ -218,6 +226,7 @@
   }
 
   function toolbar(includeExpand = true) {
+    const canRedact = Boolean(window.MDT_CAN_REDACT_REPORTS);
     const bar = document.createElement('div');
     bar.className = 'rich-editor-toolbar';
     bar.innerHTML = `
@@ -227,22 +236,20 @@
       <button type="button" data-command="strikeThrough" title="Barré"><s>S</s></button>
       <button type="button" data-command="insertUnorderedList" title="Liste">•</button>
       <button type="button" data-command="insertOrderedList" title="Liste numérotée">1.</button>
-      <select class="rich-editor-select" data-rich-select="color" title="Couleur du texte">
-        <option value="">Texte</option>
-        <option value="mdt-rich-color-red">Rouge</option>
-        <option value="mdt-rich-color-orange">Orange</option>
-        <option value="mdt-rich-color-yellow">Jaune</option>
-        <option value="mdt-rich-color-green">Vert</option>
-        <option value="mdt-rich-color-blue">Bleu</option>
-        <option value="mdt-rich-color-purple">Violet</option>
-      </select>
-      <select class="rich-editor-select" data-rich-select="highlight" title="Surlignage">
-        <option value="">Surligner</option>
-        <option value="mdt-rich-highlight-yellow">Jaune</option>
-        <option value="mdt-rich-highlight-green">Vert</option>
-        <option value="mdt-rich-highlight-blue">Bleu</option>
-        <option value="mdt-rich-highlight-red">Rouge</option>
-      </select>
+      <span class="rich-editor-separator"></span>
+      <button type="button" class="rich-editor-swatch text-red" data-rich-group="color" data-rich-class="mdt-rich-color-red" title="Texte rouge">A</button>
+      <button type="button" class="rich-editor-swatch text-orange" data-rich-group="color" data-rich-class="mdt-rich-color-orange" title="Texte orange">A</button>
+      <button type="button" class="rich-editor-swatch text-yellow" data-rich-group="color" data-rich-class="mdt-rich-color-yellow" title="Texte jaune">A</button>
+      <button type="button" class="rich-editor-swatch text-green" data-rich-group="color" data-rich-class="mdt-rich-color-green" title="Texte vert">A</button>
+      <button type="button" class="rich-editor-swatch text-blue" data-rich-group="color" data-rich-class="mdt-rich-color-blue" title="Texte bleu">A</button>
+      <button type="button" class="rich-editor-swatch text-purple" data-rich-group="color" data-rich-class="mdt-rich-color-purple" title="Texte violet">A</button>
+      <span class="rich-editor-separator"></span>
+      <button type="button" class="rich-editor-swatch mark-yellow" data-rich-group="highlight" data-rich-class="mdt-rich-highlight-yellow" title="Surligner jaune">H</button>
+      <button type="button" class="rich-editor-swatch mark-green" data-rich-group="highlight" data-rich-class="mdt-rich-highlight-green" title="Surligner vert">H</button>
+      <button type="button" class="rich-editor-swatch mark-blue" data-rich-group="highlight" data-rich-class="mdt-rich-highlight-blue" title="Surligner bleu">H</button>
+      <button type="button" class="rich-editor-swatch mark-red" data-rich-group="highlight" data-rich-class="mdt-rich-highlight-red" title="Surligner rouge">H</button>
+      ${canRedact ? '<button type="button" class="rich-editor-redact" data-rich-group="redaction" data-rich-class="mdt-rich-redacted" title="Classer confidentiel / caviarder">██</button>' : ''}
+      <button type="button" class="rich-editor-clear" data-rich-group="all" data-rich-class="" title="Retirer couleur, surlignage ou caviardage">⌫</button>
       <span class="rich-editor-spacer"></span>
       ${includeExpand ? '<button type="button" class="rich-editor-expand" title="Agrandir">⛶</button>' : ''}
     `;
@@ -251,7 +258,7 @@
 
   function bindToolbar(bar, textarea, surface) {
     bar.addEventListener('mousedown', (event) => {
-      if (event.target.closest('button, select')) event.preventDefault();
+      if (event.target.closest('button')) event.preventDefault();
     });
 
     bar.addEventListener('click', (event) => {
@@ -268,18 +275,12 @@
         return;
       }
 
+      if (button.dataset.richGroup) {
+        applyRichClass(button.dataset.richClass || '', button.dataset.richGroup);
+        return;
+      }
+
       exec(button.dataset.command);
-    });
-
-    bar.addEventListener('change', (event) => {
-      const select = event.target.closest('select[data-rich-select]');
-      if (!select) return;
-
-      activeTextarea = textarea;
-      activeEditor = surface;
-      surface.focus();
-      applyRichClass(select.value, select.dataset.richSelect);
-      select.value = '';
     });
   }
 

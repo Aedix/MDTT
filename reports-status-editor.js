@@ -1,7 +1,19 @@
 (() => {
+  function canEditStatus() {
+    return Boolean(window.MDT_CAN_EDIT_REPORT_STATUS);
+  }
+
   function ensureStatusSelector() {
+    const existingSelector = document.querySelector('#reportStatusSelector');
+    const existingLabel = existingSelector?.closest('label');
+
+    if (!canEditStatus()) {
+      existingLabel?.remove();
+      return;
+    }
+
     const accessPanel = document.querySelector('[data-panel="access"] .report-form-grid');
-    if (!accessPanel || document.querySelector('#reportStatusSelector')) return;
+    if (!accessPanel || existingSelector) return;
 
     const label = document.createElement('label');
     label.innerHTML = `Statut<select id="reportStatusSelector">
@@ -25,6 +37,8 @@
 
   function syncStatusSelector() {
     ensureStatusSelector();
+    if (!canEditStatus()) return;
+
     const hidden = document.querySelector('#reportStatus');
     const selector = document.querySelector('#reportStatusSelector');
     if (hidden && selector) selector.value = hidden.value || 'submitted';

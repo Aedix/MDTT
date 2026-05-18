@@ -165,6 +165,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   <script src="/reports-runtime-fixes.js?v=2"></script>
   <script src="/reports-arrestation-dossier.js?v=1"></script>
   <script src="/reports-status-editor.js?v=1"></script>
+  <script src="/reports-export-rich-preview.js?v=1"></script>
   <script src="/reports-export-preview.js?v=1"></script>
 </body>
 </html>

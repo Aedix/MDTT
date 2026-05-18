@@ -9,10 +9,23 @@ function reportStatusLabel(string $status): string
     return match ($status) {
         'draft' => 'Brouillon',
         'submitted' => 'Soumis',
+        'review' => 'En révision CS',
         'validated' => 'Validé',
         'archived' => 'Archivé',
         'rejected' => 'Rejeté',
         default => $status,
+    };
+}
+
+function reportClassificationLabel(string $classification): string
+{
+    return match ($classification) {
+        'unclassified' => 'Non classifié',
+        'internal' => 'Interne service',
+        'confidential' => 'Confidentiel',
+        'restricted_cs' => 'Restreint Command Staff',
+        'declassified' => 'Déclassifié',
+        default => $classification,
     };
 }
 
@@ -22,6 +35,7 @@ function reportTypeLabel(string $type): string
         'intervention' => 'Rapport d’intervention',
         'incident' => 'Rapport d’incident',
         'arrestation' => 'Rapport d’arrestation',
+        'arrestation_dossier' => 'Dossier d’arrestation',
         'operation' => 'Rapport d’opération',
         'interne' => 'Rapport interne',
         'renseignement' => 'Rapport de renseignement',
@@ -48,6 +62,16 @@ function userActiveServiceCode(array $user): string
     return strtoupper(trim((string) ($user['active_service_code'] ?? $user['service'] ?? 'MDT')));
 }
 
+function userCanManageRestrictedReports(array $user): bool
+{
+    return isSuperAdminUser($user)
+        || userHasPermission($user, '*')
+        || userHasPermission($user, 'reports.status.update')
+        || userHasMinimumRole($user, 'chief')
+        || str_contains(strtolower((string) ($user['active_rank_name'] ?? $user['rank_name'] ?? '')), 'director')
+        || str_contains(strtolower((string) ($user['active_rank_name'] ?? $user['rank_name'] ?? '')), 'command staff');
+}
+
 function canUserAccessReport(array $user, array $report, PDO $pdo): bool
 {
     if (isSuperAdminUser($user)) {
@@ -57,12 +81,28 @@ function canUserAccessReport(array $user, array $report, PDO $pdo): bool
     $userId = (int) ($user['id'] ?? 0);
     $serviceCode = userActiveServiceCode($user);
     $scope = (string) ($report['access_scope'] ?? 'service');
+    $ownerService = strtoupper((string) ($report['service_code'] ?? ''));
+    $sameService = $ownerService === $serviceCode;
+    $classification = (string) ($report['classification_level'] ?? 'internal');
+    $commandStaff = userCanManageRestrictedReports($user);
 
-    if ($userId > 0 && (int) ($report['created_by'] ?? 0) === $userId) {
+    if ($classification === 'restricted_cs' && !$commandStaff) {
+        return false;
+    }
+
+    if ($classification === 'confidential' && !$sameService && !$commandStaff) {
+        return false;
+    }
+
+    if ($classification === 'internal' && !$sameService) {
+        return false;
+    }
+
+    if ($userId > 0 && (int) ($report['created_by'] ?? 0) === $userId && $classification !== 'restricted_cs') {
         return true;
     }
 
-    if ($scope !== 'interservice' && strtoupper((string) ($report['service_code'] ?? '')) !== $serviceCode) {
+    if ($scope !== 'interservice' && !$sameService) {
         return false;
     }
 
@@ -76,7 +116,7 @@ function canUserAccessReport(array $user, array $report, PDO $pdo): bool
     }
 
     if ($scope === 'directors') {
-        return getRolePowerLevel($user['role'] ?? null) >= getRolePowerLevel('chief');
+        return $commandStaff;
     }
 
     if ($scope === 'supervisors') {
@@ -84,7 +124,6 @@ function canUserAccessReport(array $user, array $report, PDO $pdo): bool
     }
 
     if ($scope === 'division') {
-        // TODO: when user/division membership is implemented, restrict here.
         return true;
     }
 

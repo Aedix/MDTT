@@ -84,7 +84,7 @@ function resolveReportStatus(array $data, ?array $existing, array $user): string
     $allowedStatuses = ['draft', 'submitted', 'review', 'validated', 'archived', 'rejected'];
     $requestedStatus = t($data, 'status', 40) ?? 'submitted';
     if (!in_array($requestedStatus, $allowedStatuses, true)) $requestedStatus = 'submitted';
-    if (canEditReportStatus($user)) return $requestedStatus;
+    if (canEditReportStatus($user)) return $requestedStatus === 'review' ? 'submitted' : $requestedStatus;
     if ($existing) {
         $current = (string) ($existing['status'] ?? 'submitted');
         if ($current === 'draft' && $requestedStatus === 'submitted') return 'submitted';
@@ -156,8 +156,7 @@ try {
             'divisions' => $divisionsStatement->fetchAll(),
             'statuses' => [
                 ['code' => 'draft', 'label' => 'Brouillon'],
-                ['code' => 'submitted', 'label' => 'Soumis'],
-                ['code' => 'review', 'label' => 'En révision CS'],
+                ['code' => 'submitted', 'label' => 'En attente CS'],
                 ['code' => 'validated', 'label' => 'Validé'],
                 ['code' => 'archived', 'label' => 'Archivé'],
                 ['code' => 'rejected', 'label' => 'Rejeté'],
@@ -209,7 +208,7 @@ try {
             $existing = getReport($pdo, $id);
             if (!$existing) respond(['success' => false, 'message' => 'Rapport introuvable.'], 404);
             if (!canUserAccessReport($user, $existing, $pdo)) respond(['success' => false, 'message' => 'Accès refusé.'], 403);
-            if (!canEditReportContent($user, $existing, $serviceCode)) respond(['success' => false, 'message' => 'Modification refusée: seuls les brouillons du service propriétaire peuvent être modifiés par les agents. Les dossiers soumis sont réservés au Command Staff / Director du service propriétaire.'], 403);
+            if (!canEditReportContent($user, $existing, $serviceCode)) respond(['success' => false, 'message' => 'Modification refusée: seuls les brouillons du service propriétaire peuvent être modifiés par les agents. Les dossiers en attente CS sont réservés au Command Staff / Director du service propriétaire.'], 403);
         }
 
         $allowedScopes = ['service', 'interservice', 'division', 'supervisors', 'directors', 'explicit'];

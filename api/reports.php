@@ -189,6 +189,13 @@ try {
         $title = t($data, 'title', 180);
         if (!$title) respond(['success' => false, 'message' => 'Titre obligatoire.'], 400);
 
+        $existing = null;
+        if ($id > 0) {
+            $existing = getReport($pdo, $id);
+            if (!$existing) respond(['success' => false, 'message' => 'Rapport introuvable.'], 404);
+            if (!canUserAccessReport($user, $existing, $pdo)) respond(['success' => false, 'message' => 'Accès refusé.'], 403);
+        }
+
         $allowedScopes = ['service', 'interservice', 'division', 'supervisors', 'directors', 'explicit'];
         $accessScope = t($data, 'access_scope', 40) ?? 'service';
         if (!in_array($accessScope, $allowedScopes, true)) $accessScope = 'service';
@@ -197,11 +204,13 @@ try {
         $status = t($data, 'status', 40) ?? 'submitted';
         if (!in_array($status, $allowedStatuses, true)) $status = 'submitted';
 
+        $ownerServiceCode = $existing['service_code'] ?? $serviceCode;
+
         $payload = [
             'title' => $title,
             'type_code' => $type,
             'status' => $status,
-            'service_code' => $serviceCode,
+            'service_code' => $ownerServiceCode,
             'division_id' => ((int) ($data['division_id'] ?? 0)) ?: null,
             'access_scope' => $accessScope,
             'minimum_role_code' => null,
@@ -218,9 +227,6 @@ try {
         ];
 
         if ($id > 0) {
-            $existing = getReport($pdo, $id);
-            if (!$existing) respond(['success' => false, 'message' => 'Rapport introuvable.'], 404);
-            if (!canUserAccessReport($user, $existing, $pdo)) respond(['success' => false, 'message' => 'Accès refusé.'], 403);
             $payload['id'] = $id;
             $statement = $pdo->prepare('UPDATE reports SET title = :title, type_code = :type_code, status = :status, service_code = :service_code, division_id = :division_id, access_scope = :access_scope, minimum_role_code = :minimum_role_code, minimum_power_level = :minimum_power_level, occurred_at = :occurred_at, location = :location, summary = :summary, facts = :facts, actions_taken = :actions_taken, conclusions = :conclusions, notes = :notes, structured_data = :structured_data, updated_by = :updated_by WHERE id = :id');
             $statement->execute($payload);

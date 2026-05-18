@@ -3,6 +3,17 @@ let shiftStatus = document.querySelector('#shiftStatus');
 let shiftTimer = document.querySelector('#shiftTimer');
 let shiftTimerInterval = null;
 
+function loadMdtSidebar() {
+  if (document.querySelector('script[data-mdt-sidebar]')) return;
+  const script = document.createElement('script');
+  script.src = '/mdt-sidebar.js?v=1';
+  script.defer = true;
+  script.dataset.mdtSidebar = '1';
+  document.head.appendChild(script);
+}
+
+loadMdtSidebar();
+
 function formatDuration(totalSeconds) {
   const hours = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
   const minutes = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
@@ -54,6 +65,7 @@ function applyShiftState(shift) {
   }
 
   restartShiftTimer();
+  window.refreshSidebarStatus?.();
 }
 
 window.applyShiftState = applyShiftState;
@@ -83,8 +95,10 @@ if (shiftButton) {
 
       if (window.syncDashboardState) {
         await window.syncDashboardState(true);
+        window.refreshSidebarStatus?.();
       } else {
         shiftButton.disabled = false;
+        window.refreshSidebarStatus?.();
       }
     } catch (error) {
       window.alert('Erreur serveur ou réponse invalide.');

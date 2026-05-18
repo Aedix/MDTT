@@ -38,6 +38,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   <link rel="stylesheet" href="/reports-renderer.css?v=1" />
   <link rel="stylesheet" href="/reports-arrestation-dossier.css?v=1" />
   <link rel="stylesheet" href="/reports-experience.css?v=1" />
+  <link rel="stylesheet" href="/reports-ux-fixes.css?v=1" />
   <link rel="stylesheet" href="/mdt-status-highlights.css?v=1" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">

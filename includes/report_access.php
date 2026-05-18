@@ -8,8 +8,7 @@ function reportStatusLabel(string $status): string
 {
     return match ($status) {
         'draft' => 'Brouillon',
-        'submitted' => 'Soumis',
-        'review' => 'En révision CS',
+        'submitted', 'review' => 'En attente CS',
         'validated' => 'Validé',
         'archived' => 'Archivé',
         'rejected' => 'Rejeté',

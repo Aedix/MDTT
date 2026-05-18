@@ -6,6 +6,7 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/db.php';
 require_once __DIR__ . '/../includes/permissions.php';
 require_once __DIR__ . '/../includes/report_access.php';
+require_once __DIR__ . '/../includes/rich_text.php';
 
 header('Content-Type: application/json; charset=utf-8');
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
@@ -35,6 +36,12 @@ function t(array $data, string $key, int $max = 5000): ?string
     return $value === '' ? null : mb_substr($value, 0, $max);
 }
 
+function richT(array $data, string $key, int $max = 12000): ?string
+{
+    $value = t($data, $key, $max);
+    return mdtNormalizeRichText($value);
+}
+
 function structuredJson(array $data): ?string
 {
     $value = $data['structured_data'] ?? null;
@@ -43,6 +50,12 @@ function structuredJson(array $data): ?string
     }
 
     unset($value['arrestation_status']);
+
+    foreach (['charges', 'seized_items', 'custody_decision', 'main_charge', 'lawyer_name', 'arresting_matricule'] as $key) {
+        if (array_key_exists($key, $value)) {
+            $value[$key] = trim(mb_substr((string) $value[$key], 0, 6000));
+        }
+    }
 
     return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 }
@@ -240,6 +253,8 @@ try {
 
         $status = resolveReportStatus($data, $existing, $user);
         $ownerServiceCode = $existing['service_code'] ?? $serviceCode;
+        $facts = richT($data, 'facts', 12000);
+        $notes = richT($data, 'notes', 6000);
 
         $payload = [
             'title' => $title,
@@ -252,11 +267,11 @@ try {
             'minimum_power_level' => 0,
             'occurred_at' => t($data, 'occurred_at', 40),
             'location' => t($data, 'location', 180),
-            'summary' => t($data, 'summary', 6000),
-            'facts' => t($data, 'facts', 12000),
-            'actions_taken' => t($data, 'actions_taken', 8000),
-            'conclusions' => t($data, 'conclusions', 8000),
-            'notes' => t($data, 'notes', 6000),
+            'summary' => t($data, 'summary', 6000) ?? mb_substr((string) mdtRichToPlainText($facts), 0, 600),
+            'facts' => $facts,
+            'actions_taken' => richT($data, 'actions_taken', 8000),
+            'conclusions' => richT($data, 'conclusions', 8000),
+            'notes' => $notes,
             'structured_data' => structuredJson($data),
             'updated_by' => (int) $user['id'],
         ];

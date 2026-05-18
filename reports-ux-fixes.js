@@ -16,6 +16,7 @@
   };
 
   let currentClassification = 'internal';
+  let currentStatus = 'submitted';
   let lastLogs = [];
 
   function safe(value) {
@@ -57,6 +58,12 @@
     return labels[String(value || '')] || value || 'Non renseigné';
   }
 
+  function workflowKey(value) {
+    const raw = String(value || 'submitted');
+    if (raw === 'review') return 'submitted';
+    return raw;
+  }
+
   function translateLogAction(action, details = {}) {
     if (action === 'status_change') {
       const from = details.from ? statusLabel(details.from) : 'ancien statut';
@@ -88,23 +95,64 @@
     }).join('');
   }
 
-  function refreshConsultationCards() {
+  function ensureClassificationBanner() {
+    const panel = document.querySelector('.report-panel-inner');
+    if (!panel) return;
+
     document.querySelectorAll('.report-mini-card').forEach((card) => {
       const title = card.querySelector('h4')?.textContent?.trim().toLowerCase() || '';
-      if (title === 'classification') {
-        card.innerHTML = `<h4>Classification</h4><p><span class="report-badge classification">${safe(labelClassification(currentClassification))}</span></p>`;
-      }
+      if (title === 'classification') card.remove();
     });
 
+    let banner = document.querySelector('#reportClassificationBanner');
+    if (!banner) {
+      banner = document.createElement('section');
+      banner.id = 'reportClassificationBanner';
+      banner.className = 'report-classification-banner';
+      const after = document.querySelector('#reportLockNotice') || document.querySelector('#reportExperienceLockBanner') || document.querySelector('.report-document-header');
+      after?.insertAdjacentElement('afterend', banner);
+    }
+
+    banner.innerHTML = `
+      <div class="classification-banner-icon">◈</div>
+      <div>
+        <strong>Classification du document</strong>
+        <span>${safe(labelClassification(currentClassification))}</span>
+      </div>
+    `;
+  }
+
+  function refreshWorkflowState() {
+    const active = workflowKey(currentStatus || document.querySelector('#reportStatus')?.value || 'submitted');
     document.querySelectorAll('.workflow-step').forEach((step) => {
       const text = step.textContent.trim().toLowerCase();
-      step.classList.toggle('workflow-draft', text.includes('brouillon'));
-      step.classList.toggle('workflow-submitted', text.includes('attente') || text === 'soumis');
-      step.classList.toggle('workflow-review', text.includes('révision'));
-      step.classList.toggle('workflow-validated', text.includes('validé'));
-      step.classList.toggle('workflow-rejected', text.includes('rejeté'));
-      step.classList.toggle('workflow-archived', text.includes('archivé'));
+      const isSubmitted = text.includes('attente') || text === 'soumis' || text.includes('révision');
+      const key = text.includes('brouillon') ? 'draft'
+        : isSubmitted ? 'submitted'
+        : text.includes('validé') ? 'validated'
+        : text.includes('rejeté') ? 'rejected'
+        : text.includes('archivé') ? 'archived'
+        : '';
+
+      if (text === 'soumis' || text.includes('révision')) {
+        if (step.dataset.normalized !== '1') step.childNodes.forEach((node) => {
+          if (node.nodeType === Node.TEXT_NODE) node.textContent = ' En attente CS';
+        });
+        step.dataset.normalized = '1';
+      }
+
+      step.classList.toggle('active', key === active);
+      step.classList.toggle('workflow-draft', key === 'draft');
+      step.classList.toggle('workflow-submitted', key === 'submitted');
+      step.classList.toggle('workflow-validated', key === 'validated');
+      step.classList.toggle('workflow-rejected', key === 'rejected');
+      step.classList.toggle('workflow-archived', key === 'archived');
     });
+  }
+
+  function refreshConsultationCards() {
+    ensureClassificationBanner();
+    refreshWorkflowState();
   }
 
   function jumpToLinkedCitizen(id, vehicleId = '') {
@@ -114,10 +162,17 @@
     window.location.href = `/search.php?${params.toString()}`;
   }
 
+  function applyOpenedReportState(report = null) {
+    currentClassification = report?.classification_level || currentClassification || 'internal';
+    currentStatus = workflowKey(report?.status || document.querySelector('#reportStatus')?.value || currentStatus || 'submitted');
+    setTimeout(refreshConsultationCards, 60);
+  }
+
   const baseFillReport = window.fillReport;
   if (typeof baseFillReport === 'function') {
     window.fillReport = function fillReportUxFixed(report = null, extra = {}) {
       currentClassification = report?.classification_level || 'internal';
+      currentStatus = workflowKey(report?.status || 'submitted');
       baseFillReport(report, extra);
       setTimeout(() => {
         patchLogs(extra.logs || []);
@@ -130,6 +185,7 @@
   if (typeof baseRenderDocument === 'function') {
     window.renderDocument = function renderDocumentUxFixed(report = {}) {
       currentClassification = report?.classification_level || currentClassification || 'internal';
+      currentStatus = workflowKey(report?.status || document.querySelector('#reportStatus')?.value || currentStatus || 'submitted');
       baseRenderDocument(report);
       setTimeout(refreshConsultationCards, 30);
     };
@@ -171,6 +227,17 @@
       const vehicleId = Number(vehicle.dataset.openVehicle || 0);
       const linked = typeof linkedVehicles !== 'undefined' ? linkedVehicles.find((item) => Number(item.id) === vehicleId) : null;
       if (linked?.citizen_id) jumpToLinkedCitizen(linked.citizen_id, vehicleId);
+    }
+  }, true);
+
+  document.addEventListener('change', (event) => {
+    if (event.target?.id === 'reportStatus' || event.target?.id === 'reportStatusSelector') {
+      currentStatus = workflowKey(event.target.value || 'submitted');
+      setTimeout(refreshWorkflowState, 30);
+    }
+    if (event.target?.id === 'reportClassification') {
+      currentClassification = event.target.value || 'internal';
+      setTimeout(ensureClassificationBanner, 30);
     }
   }, true);
 

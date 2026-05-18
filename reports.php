@@ -61,6 +61,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   <script src="/reports-renderer.js?v=1"></script>
   <script src="/reports-arrestation-dossier.js?v=1"></script>
   <script src="/reports-experience.js?v=1"></script>
+  <script src="/reports-ux-fixes.js?v=1"></script>
   <script src="/reports-permissions.js?v=1"></script>
   <script src="/reports-export.js?v=1"></script>
 </body>

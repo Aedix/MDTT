@@ -1,5 +1,8 @@
 (() => {
   const EDITOR_IDS = ['reportFacts', 'reportActionsTaken', 'reportConclusions', 'reportNotes'];
+  const TEXT_COLOR_CLASSES = ['mdt-rich-color-red', 'mdt-rich-color-orange', 'mdt-rich-color-yellow', 'mdt-rich-color-green', 'mdt-rich-color-blue', 'mdt-rich-color-purple'];
+  const HIGHLIGHT_CLASSES = ['mdt-rich-highlight-yellow', 'mdt-rich-highlight-green', 'mdt-rich-highlight-blue', 'mdt-rich-highlight-red'];
+  const ALLOWED_SPAN_CLASSES = new Set([...TEXT_COLOR_CLASSES, ...HIGHLIGHT_CLASSES]);
   let activeTextarea = null;
   let activeEditor = null;
   let refreshQueued = false;
@@ -12,6 +15,26 @@
       .replaceAll('>', '&gt;')
       .replaceAll('"', '&quot;')
       .replaceAll("'", '&#039;');
+  }
+
+  function bbClass(type, value) {
+    const normalized = String(value || '').trim().toLowerCase();
+    const colorMap = {
+      red: 'mdt-rich-color-red', rouge: 'mdt-rich-color-red',
+      orange: 'mdt-rich-color-orange',
+      yellow: 'mdt-rich-color-yellow', jaune: 'mdt-rich-color-yellow',
+      green: 'mdt-rich-color-green', vert: 'mdt-rich-color-green',
+      blue: 'mdt-rich-color-blue', bleu: 'mdt-rich-color-blue',
+      purple: 'mdt-rich-color-purple', violet: 'mdt-rich-color-purple',
+    };
+    const highlightMap = {
+      yellow: 'mdt-rich-highlight-yellow', jaune: 'mdt-rich-highlight-yellow',
+      green: 'mdt-rich-highlight-green', vert: 'mdt-rich-highlight-green',
+      blue: 'mdt-rich-highlight-blue', bleu: 'mdt-rich-highlight-blue',
+      red: 'mdt-rich-highlight-red', rouge: 'mdt-rich-highlight-red',
+    };
+
+    return type === 'highlight' ? highlightMap[normalized] : colorMap[normalized];
   }
 
   function bbCodeToHtml(value) {
@@ -27,6 +50,16 @@
       .replace(/\[strike\]([\s\S]*?)\[\/strike\]/gi, '<s>$1</s>')
       .replace(/\[br\s*\/\]/gi, '<br>')
       .replace(/\[br\]/gi, '<br>');
+
+    html = html.replace(/\[color=([^\]]+)\]([\s\S]*?)\[\/color\]/gi, (_, color, content) => {
+      const className = bbClass('color', color);
+      return className ? `<span class="${className}">${content}</span>` : content;
+    });
+
+    html = html.replace(/\[(highlight|mark|bg)=([^\]]+)\]([\s\S]*?)\[\/\1\]/gi, (_, type, color, content) => {
+      const className = bbClass('highlight', color);
+      return className ? `<span class="${className}">${content}</span>` : content;
+    });
 
     html = html.replace(/\[list=1\]([\s\S]*?)\[\/list\]/gi, (_, content) => {
       const items = content.split(/\[\*\]/g).map((item) => item.trim()).filter(Boolean).map((item) => `<li>${item}</li>`).join('');
@@ -51,14 +84,35 @@
     return html;
   }
 
+  function sanitizeSpanClasses(node) {
+    if (node.tagName !== 'SPAN') return;
+    const classes = String(node.getAttribute('class') || '')
+      .split(/\s+/)
+      .filter((className) => ALLOWED_SPAN_CLASSES.has(className));
+
+    Array.from(node.attributes).forEach((attr) => node.removeAttribute(attr.name));
+
+    if (classes.length) {
+      node.setAttribute('class', Array.from(new Set(classes)).join(' '));
+      return;
+    }
+
+    node.replaceWith(...Array.from(node.childNodes));
+  }
+
   function sanitizeRichHtml(html) {
     const template = document.createElement('template');
     template.innerHTML = String(html || '');
-    const allowedTags = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'P', 'BR', 'UL', 'OL', 'LI']);
+    const allowedTags = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'P', 'BR', 'UL', 'OL', 'LI', 'SPAN']);
 
     template.content.querySelectorAll('*').forEach((node) => {
       if (!allowedTags.has(node.tagName)) {
         node.replaceWith(...Array.from(node.childNodes));
+        return;
+      }
+
+      if (node.tagName === 'SPAN') {
+        sanitizeSpanClasses(node);
         return;
       }
 
@@ -68,17 +122,15 @@
     return template.innerHTML
       .replace(/<div>/gi, '<p>')
       .replace(/<\/div>/gi, '</p>')
-      .replace(/<span>/gi, '')
-      .replace(/<\/span>/gi, '')
       .trim();
   }
 
   function hasHtml(value) {
-    return /<\/?(p|b|strong|i|em|u|s|ul|ol|li|br)\b/i.test(String(value || ''));
+    return /<\/?(p|b|strong|i|em|u|s|ul|ol|li|br|span)\b/i.test(String(value || ''));
   }
 
   function hasBBCode(value) {
-    return /\[(b|strong|i|em|u|s|strike|br|list|list=1|ul|ol|\*)\b/i.test(String(value || ''));
+    return /\[(b|strong|i|em|u|s|strike|br|list|list=1|ul|ol|\*|color|highlight|mark|bg)\b/i.test(String(value || ''));
   }
 
   function plainTextToHtml(value) {
@@ -127,7 +179,45 @@
     if (activeTextarea && activeEditor) syncTextarea(activeTextarea, activeEditor);
   }
 
-  function toolbar() {
+  function cleanClassesInFragment(fragment, group) {
+    const classes = group === 'highlight' ? HIGHLIGHT_CLASSES : TEXT_COLOR_CLASSES;
+    fragment.querySelectorAll?.('span').forEach((span) => {
+      classes.forEach((className) => span.classList.remove(className));
+      if (!span.getAttribute('class')) span.replaceWith(...Array.from(span.childNodes));
+    });
+  }
+
+  function applyRichClass(className, group) {
+    if (!activeEditor) return;
+    activeEditor.focus();
+
+    const selection = window.getSelection();
+    if (!selection || selection.rangeCount === 0 || selection.isCollapsed) return;
+
+    const range = selection.getRangeAt(0);
+    if (!activeEditor.contains(range.commonAncestorContainer)) return;
+
+    const fragment = range.extractContents();
+    cleanClassesInFragment(fragment, group);
+
+    if (!className) {
+      range.insertNode(fragment);
+    } else {
+      const span = document.createElement('span');
+      span.className = className;
+      span.appendChild(fragment);
+      range.insertNode(span);
+      selection.removeAllRanges();
+      const afterRange = document.createRange();
+      afterRange.selectNodeContents(span);
+      afterRange.collapse(false);
+      selection.addRange(afterRange);
+    }
+
+    if (activeTextarea) syncTextarea(activeTextarea, activeEditor);
+  }
+
+  function toolbar(includeExpand = true) {
     const bar = document.createElement('div');
     bar.className = 'rich-editor-toolbar';
     bar.innerHTML = `
@@ -137,10 +227,60 @@
       <button type="button" data-command="strikeThrough" title="Barré"><s>S</s></button>
       <button type="button" data-command="insertUnorderedList" title="Liste">•</button>
       <button type="button" data-command="insertOrderedList" title="Liste numérotée">1.</button>
+      <select class="rich-editor-select" data-rich-select="color" title="Couleur du texte">
+        <option value="">Texte</option>
+        <option value="mdt-rich-color-red">Rouge</option>
+        <option value="mdt-rich-color-orange">Orange</option>
+        <option value="mdt-rich-color-yellow">Jaune</option>
+        <option value="mdt-rich-color-green">Vert</option>
+        <option value="mdt-rich-color-blue">Bleu</option>
+        <option value="mdt-rich-color-purple">Violet</option>
+      </select>
+      <select class="rich-editor-select" data-rich-select="highlight" title="Surlignage">
+        <option value="">Surligner</option>
+        <option value="mdt-rich-highlight-yellow">Jaune</option>
+        <option value="mdt-rich-highlight-green">Vert</option>
+        <option value="mdt-rich-highlight-blue">Bleu</option>
+        <option value="mdt-rich-highlight-red">Rouge</option>
+      </select>
       <span class="rich-editor-spacer"></span>
-      <button type="button" class="rich-editor-expand" title="Agrandir">⛶</button>
+      ${includeExpand ? '<button type="button" class="rich-editor-expand" title="Agrandir">⛶</button>' : ''}
     `;
     return bar;
+  }
+
+  function bindToolbar(bar, textarea, surface) {
+    bar.addEventListener('mousedown', (event) => {
+      if (event.target.closest('button, select')) event.preventDefault();
+    });
+
+    bar.addEventListener('click', (event) => {
+      const button = event.target.closest('button');
+      if (!button) return;
+      event.preventDefault();
+
+      activeTextarea = textarea;
+      activeEditor = surface;
+      surface.focus();
+
+      if (button.classList.contains('rich-editor-expand')) {
+        openModal(textarea, surface);
+        return;
+      }
+
+      exec(button.dataset.command);
+    });
+
+    bar.addEventListener('change', (event) => {
+      const select = event.target.closest('select[data-rich-select]');
+      if (!select) return;
+
+      activeTextarea = textarea;
+      activeEditor = surface;
+      surface.focus();
+      applyRichClass(select.value, select.dataset.richSelect);
+      select.value = '';
+    });
   }
 
   function buildEditor(textarea) {
@@ -155,7 +295,7 @@
     shell.className = 'rich-editor-shell';
     shell.dataset.for = textarea.id;
 
-    const bar = toolbar();
+    const bar = toolbar(true);
     const surface = document.createElement('div');
     surface.className = 'rich-editor-surface';
     surface.contentEditable = 'true';
@@ -179,22 +319,7 @@
       syncTextarea(textarea, surface);
     });
 
-    bar.addEventListener('click', (event) => {
-      const button = event.target.closest('button');
-      if (!button) return;
-      event.preventDefault();
-
-      activeTextarea = textarea;
-      activeEditor = surface;
-      surface.focus();
-
-      if (button.classList.contains('rich-editor-expand')) {
-        openModal(textarea, surface);
-        return;
-      }
-
-      exec(button.dataset.command);
-    });
+    bindToolbar(bar, textarea, surface);
   }
 
   function ensureModal() {
@@ -236,14 +361,13 @@
     title.textContent = label;
     body.innerHTML = '';
 
-    const bar = toolbar();
+    const bar = toolbar(false);
     const surface = document.createElement('div');
     surface.className = 'rich-editor-surface';
     surface.contentEditable = 'true';
     surface.dataset.placeholder = sourceEditor.dataset.placeholder || 'Écrire le contenu du rapport...';
     surface.innerHTML = sourceEditor.innerHTML;
 
-    bar.querySelector('.rich-editor-expand')?.remove();
     body.appendChild(bar);
     body.appendChild(surface);
 
@@ -253,15 +377,7 @@
     setTimeout(() => surface.focus(), 0);
 
     surface.addEventListener('input', () => syncTextarea(textarea, surface));
-    bar.addEventListener('click', (event) => {
-      const button = event.target.closest('button[data-command]');
-      if (!button) return;
-      event.preventDefault();
-      activeTextarea = textarea;
-      activeEditor = surface;
-      surface.focus();
-      exec(button.dataset.command);
-    });
+    bindToolbar(bar, textarea, surface);
 
     modal.dataset.sourceId = textarea.id;
   }

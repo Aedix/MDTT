@@ -26,6 +26,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   <link rel="stylesheet" href="/style.css?v=11" />
   <link rel="stylesheet" href="/mdt.css?v=7" />
   <link rel="stylesheet" href="/reports.css?v=3" />
+  <link rel="stylesheet" href="/reports-arrestation-dossier.css?v=1" />
   <link rel="stylesheet" href="/mdt-status-highlights.css?v=1" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">
@@ -151,6 +152,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   </script>
   <script src="/reports.js?v=6"></script>
   <script src="/reports-runtime-fixes.js?v=2"></script>
+  <script src="/reports-arrestation-dossier.js?v=1"></script>
   <script src="/reports-status-editor.js?v=1"></script>
   <script src="/reports-export-preview.js?v=1"></script>
 </body>

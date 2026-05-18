@@ -1,4 +1,15 @@
 (() => {
+  function loadLinkedReportPreviewFixes() {
+    if (document.querySelector('script[data-linked-report-fixes="1"]')) return;
+    const script = document.createElement('script');
+    script.src = '/search-linked-report-fixes.js?v=1';
+    script.async = false;
+    script.dataset.linkedReportFixes = '1';
+    document.head.appendChild(script);
+  }
+
+  loadLinkedReportPreviewFixes();
+
   function activateReportsNavLink() {
     document.querySelectorAll('.mdt-nav-link').forEach((link) => {
       const label = (link.textContent || '').trim().toLowerCase();

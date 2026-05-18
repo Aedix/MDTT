@@ -3,6 +3,14 @@
     return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
   }
 
+  function rich(value) {
+    if (window.MDTRichText?.toHtml) {
+      const html = window.MDTRichText.toHtml(value);
+      return html || 'Non renseigné';
+    }
+    return safe(value || 'Non renseigné');
+  }
+
   function normalizeStatus(value) {
     return String(value || 'unknown')
       .toLowerCase()
@@ -84,7 +92,7 @@
         </div>
         <div class="fib-template-grid three"><div><span>DATE DE L’INCIDENT</span><strong>${safe(date.date)}</strong></div><div><span>HEURE DE L’INCIDENT</span><strong>${safe(date.time)}</strong></div><div><span>JOUR DE LA SEMAINE</span><strong>${safe(date.weekday)}</strong></div></div>
         <div class="fib-template-row"><span>AGENT INTERVENANT</span><strong>${safe(officers)}</strong></div>
-        <div class="fib-template-block"><span>RÉCIT</span><p>${safe(report.facts || 'Non renseigné')}</p></div>
+        <div class="fib-template-block"><span>RÉCIT</span><div class="fib-template-rich">${rich(report.facts)}</div></div>
         <div class="fib-template-block small"><span>OFFICIERS IMPLIQUÉS</span><p>${safe(officers)}</p></div>
         <div class="fib-template-grid two"><div><span>TYPE D’INCIDENT</span><strong>${safe(type)}</strong></div><div><span>EMPLACEMENT D’INCIDENT</span><strong>${safe(report.location || 'Non renseigné')}</strong></div></div>
         <div class="fib-template-block signature"><span>SIGNATURE OFFICIER</span><p>${safe(signature)}</p></div>

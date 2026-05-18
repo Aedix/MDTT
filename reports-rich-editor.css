@@ -10,13 +10,15 @@
 .rich-editor-toolbar {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 5px;
   padding: 7px;
   border-bottom: 1px solid rgba(154, 168, 189, .12);
   background: rgba(3, 7, 18, .24);
 }
 
-.rich-editor-toolbar button {
+.rich-editor-toolbar button,
+.rich-editor-select {
   display: inline-grid;
   place-items: center;
   min-width: 30px;
@@ -29,7 +31,17 @@
   cursor: pointer;
 }
 
-.rich-editor-toolbar button:hover {
+.rich-editor-select {
+  display: inline-block;
+  min-width: 92px;
+  padding: 0 8px;
+  font-size: .78rem;
+  font-weight: 800;
+  color: #dbeafe;
+}
+
+.rich-editor-toolbar button:hover,
+.rich-editor-select:hover {
   border-color: rgba(47, 128, 237, .45);
   background: rgba(47, 128, 237, .14);
 }
@@ -142,6 +154,18 @@
   font-size: 1rem;
   background: rgba(255, 255, 255, .025);
 }
+
+.mdt-rich-color-red { color: #ef4444; }
+.mdt-rich-color-orange { color: #f97316; }
+.mdt-rich-color-yellow { color: #eab308; }
+.mdt-rich-color-green { color: #22c55e; }
+.mdt-rich-color-blue { color: #3b82f6; }
+.mdt-rich-color-purple { color: #a855f7; }
+
+.mdt-rich-highlight-yellow { background: rgba(250, 204, 21, .34); color: inherit; padding: 0 2px; border-radius: 3px; }
+.mdt-rich-highlight-green { background: rgba(34, 197, 94, .26); color: inherit; padding: 0 2px; border-radius: 3px; }
+.mdt-rich-highlight-blue { background: rgba(59, 130, 246, .27); color: inherit; padding: 0 2px; border-radius: 3px; }
+.mdt-rich-highlight-red { background: rgba(239, 68, 68, .28); color: inherit; padding: 0 2px; border-radius: 3px; }
 
 .fib-template-rich {
   min-height: 330px;

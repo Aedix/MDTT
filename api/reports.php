@@ -58,11 +58,12 @@ function reportLog(PDO $pdo, int $reportId, string $action, array $details, int 
 function getReport(PDO $pdo, int $id): ?array
 {
     $statement = $pdo->prepare(
-        'SELECT r.*, creator.username AS created_by_username, updater.username AS updated_by_username, d.name AS division_name
+        'SELECT r.*, creator.username AS created_by_username, updater.username AS updated_by_username, d.name AS division_name, s.name AS service_name, s.logo_path AS service_logo_path
          FROM reports r
          LEFT JOIN users creator ON creator.id = r.created_by
          LEFT JOIN users updater ON updater.id = r.updated_by
          LEFT JOIN divisions d ON d.id = r.division_id
+         LEFT JOIN services s ON s.code = r.service_code
          WHERE r.id = :id
          LIMIT 1'
     );

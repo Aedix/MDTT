@@ -1,1 +1,93 @@
-.arrestation-dossier-fields{grid-column:1/-1;margin-top:8px;border:1px solid rgba(154,168,189,.16);border-radius:16px;background:rgba(255,255,255,.025);padding:14px}.arrestation-fields-header{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;margin-bottom:12px}.arrestation-fields-header h3{margin:0;color:var(--mdt-text);font-size:1rem}.arrestation-fields-header small{color:var(--mdt-muted);font-size:.78rem}.arrestation-grid{margin-top:0}.arrestation-document-template{font-family:Arial,sans-serif}.arrestation-document-template .fib-template-header strong{width:118mm;font-size:18pt}.arrestation-document-template .fib-template-grid.two{grid-template-columns:2fr 1fr}.arrestation-document-template .fib-template-grid.three{grid-template-columns:1fr 1fr 1fr}.arrestation-document-template .fib-template-grid strong{min-height:22px}.arrestation-document-template .arrestation-charges{min-height:34mm}.arrestation-document-template .charge-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;border:1px solid #111;margin:0;padding:6px;min-height:24mm;background:rgba(255,255,255,.08)}.arrestation-document-template .charge-grid strong{min-height:21px;border:1px solid #111;background:rgba(255,255,255,.14);padding:4px;font-size:9.5pt}.arrestation-document-template .arrestation-story p{min-height:70mm}.arrestation-document-template .fib-template-block.small p{min-height:15mm}.arrestation-document-template .fib-template-grid.two:last-child strong{min-height:20mm}@media print{.arrestation-dossier-fields{display:none!important}}
+.arrestation-dossier-fields {
+  grid-column: 1 / -1;
+  margin-top: 8px;
+  border: 1px solid rgba(154, 168, 189, .16);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, .025);
+  padding: 14px;
+}
+
+.arrestation-fields-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.arrestation-fields-header h3 {
+  margin: 0;
+  color: var(--mdt-text);
+  font-size: 1rem;
+}
+
+.arrestation-fields-header small {
+  color: var(--mdt-muted);
+  font-size: .78rem;
+}
+
+.arrestation-grid {
+  margin-top: 0;
+}
+
+.arrestation-document-template {
+  font-family: Arial, sans-serif;
+}
+
+.arrestation-document-template .fib-template-header strong {
+  width: 118mm;
+  font-size: 18pt;
+}
+
+.arrestation-document-template .fib-template-grid.two {
+  grid-template-columns: 2fr 1fr;
+}
+
+.arrestation-document-template .fib-template-grid.three {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+
+.arrestation-document-template .fib-template-grid strong {
+  min-height: 22px;
+}
+
+.arrestation-document-template .arrestation-charges {
+  min-height: 34mm;
+}
+
+.arrestation-document-template .charge-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  border: 1px solid #111;
+  margin: 0;
+  padding: 6px;
+  min-height: 24mm;
+  background: rgba(255, 255, 255, .08);
+}
+
+.arrestation-document-template .charge-grid strong {
+  min-height: 21px;
+  border: 1px solid #111;
+  background: rgba(255, 255, 255, .14);
+  padding: 4px;
+  font-size: 9.5pt;
+}
+
+.arrestation-document-template .arrestation-story p {
+  min-height: 70mm;
+}
+
+.arrestation-document-template .fib-template-block.small p {
+  min-height: 15mm;
+}
+
+.arrestation-document-template .fib-template-grid.two:last-child strong {
+  min-height: 20mm;
+}
+
+@media print {
+  .arrestation-dossier-fields {
+    display: none !important;
+  }
+}

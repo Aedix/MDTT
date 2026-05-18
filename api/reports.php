@@ -45,9 +45,7 @@ function richT(array $data, string $key, int $max = 12000): ?string
 function structuredJson(array $data): ?string
 {
     $value = $data['structured_data'] ?? null;
-    if (!is_array($value)) {
-        return null;
-    }
+    if (!is_array($value)) return null;
 
     unset($value['arrestation_status']);
 
@@ -60,7 +58,7 @@ function structuredJson(array $data): ?string
     return json_encode($value, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 }
 
-function canEditReportStatus(array $user): bool
+function isReportCommandStaff(array $user): bool
 {
     $technicalRole = str_replace(['-', ' '], '_', strtolower(trim((string) ($user['role'] ?? ''))));
     $rankCode = str_replace(['-', ' '], '_', strtolower(trim((string) ($user['active_rank_code'] ?? $user['rank_code'] ?? $user['active_rank_name'] ?? $user['rank_name'] ?? ''))));
@@ -75,22 +73,32 @@ function canEditReportStatus(array $user): bool
         || str_contains($rankName, 'command staff');
 }
 
+function canEditReportStatus(array $user): bool
+{
+    return isReportCommandStaff($user);
+}
+
+function canEditReportContent(array $user, ?array $existing, string $activeServiceCode): bool
+{
+    if (!$existing) return true;
+
+    $ownerService = strtolower((string) ($existing['service_code'] ?? ''));
+    $activeService = strtolower((string) $activeServiceCode);
+    if ($ownerService !== $activeService) return false;
+
+    if (isReportCommandStaff($user)) return true;
+
+    return (string) ($existing['status'] ?? 'submitted') === 'draft';
+}
+
 function resolveReportStatus(array $data, ?array $existing, array $user): string
 {
     $allowedStatuses = ['draft', 'submitted', 'validated', 'archived', 'rejected'];
     $requestedStatus = t($data, 'status', 40) ?? 'submitted';
-    if (!in_array($requestedStatus, $allowedStatuses, true)) {
-        $requestedStatus = 'submitted';
-    }
+    if (!in_array($requestedStatus, $allowedStatuses, true)) $requestedStatus = 'submitted';
 
-    if (canEditReportStatus($user)) {
-        return $requestedStatus;
-    }
-
-    if ($existing) {
-        return (string) ($existing['status'] ?? 'submitted');
-    }
-
+    if (canEditReportStatus($user)) return $requestedStatus;
+    if ($existing) return (string) ($existing['status'] ?? 'submitted');
     return 'submitted';
 }
 
@@ -177,12 +185,7 @@ try {
              ORDER BY r.updated_at DESC
              LIMIT 120'
         );
-        $statement->execute([
-            'service_code' => $serviceCode,
-            'q' => $q,
-            'search' => $search,
-        ]);
-
+        $statement->execute(['service_code' => $serviceCode, 'q' => $q, 'search' => $search]);
         $reports = array_values(array_filter($statement->fetchAll(), static fn (array $report): bool => canUserAccessReport($GLOBALS['user'], $report, $GLOBALS['pdo'])));
         respond(['success' => true, 'reports' => $reports]);
     }
@@ -202,21 +205,13 @@ try {
         $logs = $pdo->prepare('SELECT rl.action, rl.details, rl.created_at, u.username FROM report_logs rl LEFT JOIN users u ON u.id = rl.created_by WHERE rl.report_id = :id ORDER BY rl.created_at DESC LIMIT 20');
         $logs->execute(['id' => $id]);
 
-        respond([
-            'success' => true,
-            'report' => $report,
-            'citizens' => $citizens->fetchAll(),
-            'vehicles' => $vehicles->fetchAll(),
-            'agents' => $agents->fetchAll(),
-            'logs' => $logs->fetchAll(),
-        ]);
+        respond(['success' => true, 'report' => $report, 'citizens' => $citizens->fetchAll(), 'vehicles' => $vehicles->fetchAll(), 'agents' => $agents->fetchAll(), 'logs' => $logs->fetchAll()]);
     }
 
     if ($method === 'GET' && $action === 'lookup') {
         $target = (string) ($_GET['target'] ?? 'citizens');
         $q = trim((string) ($_GET['q'] ?? ''));
         $search = '%' . $q . '%';
-
         if (mb_strlen($q) < 2) respond(['success' => true, 'items' => []]);
 
         if ($target === 'citizens') {
@@ -229,7 +224,6 @@ try {
             $statement = $pdo->prepare('SELECT id, username AS label, rank_name AS meta FROM users WHERE username LIKE ? OR rank_name LIKE ? ORDER BY username ASC LIMIT 12');
             $statement->execute([$search, $search]);
         }
-
         respond(['success' => true, 'items' => $statement->fetchAll()]);
     }
 
@@ -245,6 +239,7 @@ try {
             $existing = getReport($pdo, $id);
             if (!$existing) respond(['success' => false, 'message' => 'Rapport introuvable.'], 404);
             if (!canUserAccessReport($user, $existing, $pdo)) respond(['success' => false, 'message' => 'Accès refusé.'], 403);
+            if (!canEditReportContent($user, $existing, $serviceCode)) respond(['success' => false, 'message' => 'Modification refusée: seuls les brouillons du service propriétaire peuvent être modifiés par les agents. Les dossiers soumis sont réservés au Command Staff / Director du service propriétaire.'], 403);
         }
 
         $allowedScopes = ['service', 'interservice', 'division', 'supervisors', 'directors', 'explicit'];

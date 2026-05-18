@@ -1,4 +1,5 @@
-.arrestation-dossier-fields {
+.arrestation-dossier-fields,
+.arrestation-inline-links {
   grid-column: 1 / -1;
   margin-top: 8px;
   border: 1px solid rgba(154, 168, 189, .16);
@@ -24,10 +25,23 @@
 .arrestation-fields-header small {
   color: var(--mdt-muted);
   font-size: .78rem;
+  text-align: right;
 }
 
 .arrestation-grid {
   margin-top: 0;
+}
+
+.arrestation-agent-results {
+  margin-top: 8px;
+}
+
+.arrestation-inline-links .linked-search-grid {
+  margin-top: 0;
+}
+
+.arrestation-inline-links .linked-search-box {
+  min-width: 0;
 }
 
 .arrestation-document-template {
@@ -47,47 +61,61 @@
   grid-template-columns: 1fr 1fr 1fr;
 }
 
+.arrestation-document-template .arrestation-admin-grid {
+  grid-template-columns: 1.25fr 1fr 1fr;
+}
+
+.arrestation-document-template .arrestation-linked-grid {
+  grid-template-columns: 1.35fr .9fr;
+}
+
+.arrestation-document-template .arrestation-decision-grid {
+  grid-template-columns: 1.5fr .8fr;
+}
+
 .arrestation-document-template .fib-template-grid strong {
-  min-height: 22px;
+  min-height: 20px;
 }
 
 .arrestation-document-template .arrestation-charges {
-  min-height: 34mm;
+  min-height: 26mm;
 }
 
 .arrestation-document-template .charge-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: 5px;
   border: 1px solid #111;
   margin: 0;
-  padding: 6px;
-  min-height: 24mm;
+  padding: 5px;
+  min-height: 20mm;
   background: rgba(255, 255, 255, .08);
 }
 
 .arrestation-document-template .charge-grid strong {
-  min-height: 21px;
+  min-height: 18px;
   border: 1px solid #111;
   background: rgba(255, 255, 255, .14);
   padding: 4px;
-  font-size: 9.5pt;
+  font-size: 9pt;
 }
 
 .arrestation-document-template .arrestation-story p {
-  min-height: 70mm;
+  min-height: 58mm;
 }
 
 .arrestation-document-template .fib-template-block.small p {
-  min-height: 15mm;
+  min-height: 12mm;
 }
 
-.arrestation-document-template .fib-template-grid.two:last-child strong {
-  min-height: 20mm;
+.arrestation-document-template .fib-template-grid.two:last-child strong,
+.arrestation-document-template .arrestation-decision-grid strong {
+  min-height: 16mm;
 }
 
 @media print {
-  .arrestation-dossier-fields {
+  .arrestation-dossier-fields,
+  .arrestation-inline-links {
     display: none !important;
   }
 }

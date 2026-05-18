@@ -49,6 +49,64 @@
     };
   }
 
+  function installClassifiedStyle() {
+    if (document.querySelector('#mdtClassifiedRichStyle')) return;
+    const style = document.createElement('style');
+    style.id = 'mdtClassifiedRichStyle';
+    style.textContent = `
+      .rich-editor-redact,.rich-editor-classified{min-width:40px!important;background:#050505!important;color:#050505!important;border-color:#334155!important;box-shadow:inset 0 0 0 1px rgba(255,255,255,.08)}
+      .mdt-rich-redacted,.mdt-rich-classified{display:inline-block;min-width:4.5em;min-height:1em;background:#050505;color:#050505!important;border-radius:2px;vertical-align:-.12em;user-select:none}
+      .rich-editor-surface .mdt-rich-redacted,.rich-editor-surface .mdt-rich-classified{color:rgba(255,255,255,.08)!important;caret-color:#fff}
+      .fib-template-rich .mdt-rich-redacted,.fib-template-rich .mdt-rich-classified{color:#050505!important}
+      .report-panel-inner[data-locked="1"] .rich-editor-toolbar button:not(.rich-editor-expand){opacity:.45;pointer-events:none}
+      .report-lock-notice{margin:10px 0 0;padding:10px 12px;border:1px solid rgba(245,158,11,.25);border-radius:12px;background:rgba(245,158,11,.08);color:#fde68a;font-weight:800;font-size:.86rem}
+    `;
+    document.head.appendChild(style);
+  }
+
+  function canCurrentUserEditReport(report) {
+    if (!report || !report.id) return true;
+    const currentService = activeServiceCode?.() || '';
+    const ownerService = report.service_code || currentReportServiceCode || currentService;
+    const sameService = String(ownerService).toLowerCase() === String(currentService).toLowerCase();
+    const elevated = Boolean(window.MDT_CAN_EDIT_REPORT_STATUS);
+    if (!sameService) return false;
+    if (elevated) return true;
+    return String(report.status || 'submitted') === 'draft';
+  }
+
+  function lockReportForm(report) {
+    const root = document.querySelector('.report-panel-inner');
+    if (!root) return;
+    const locked = !canCurrentUserEditReport(report);
+    root.dataset.locked = locked ? '1' : '0';
+
+    ['saveReportButton', 'editReportButton'].forEach((id) => {
+      const button = get(id);
+      if (button) button.hidden = locked || button.hidden;
+    });
+
+    root.querySelectorAll('input, textarea, select').forEach((field) => {
+      if (field.id === 'reportId' || field.id === 'reportStatus') return;
+      field.disabled = locked;
+    });
+
+    root.querySelectorAll('.lookup-item, .selected-chip, #newReportButton').forEach((item) => {
+      item.disabled = locked;
+    });
+
+    root.querySelector('.report-lock-notice')?.remove();
+    if (locked) {
+      const notice = document.createElement('p');
+      notice.className = 'report-lock-notice';
+      notice.textContent = 'Document verrouillé : seuls les brouillons du service propriétaire sont modifiables. Les dossiers soumis sont réservés au Command Staff / Director du service propriétaire.';
+      root.querySelector('.report-tab-panels')?.prepend(notice);
+      setEditMode(false);
+    }
+  }
+
+  installClassifiedStyle();
+  window.MDT_CAN_REDACT_REPORTS = Boolean(window.MDT_CAN_REDACT_REPORTS || window.MDT_CAN_EDIT_REPORT_STATUS);
   window.formatDateParts = fixedDateParts;
 
   window.renderReports = function renderReportsFixed() {
@@ -69,6 +127,12 @@
         </button>
       `;
     }).join('');
+  };
+
+  const baseFillReport = window.fillReport;
+  window.fillReport = function fillReportWithLock(report = null, extra = {}) {
+    baseFillReport(report, extra);
+    lockReportForm(report || window.payload?.() || {});
   };
 
   window.renderDocument = function renderDocumentFixed(report) {

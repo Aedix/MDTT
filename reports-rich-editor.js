@@ -2,6 +2,8 @@
   const EDITOR_IDS = ['reportFacts', 'reportActionsTaken', 'reportConclusions', 'reportNotes'];
   let activeTextarea = null;
   let activeEditor = null;
+  let refreshQueued = false;
+  let isRefreshing = false;
 
   function escapeHtml(value) {
     return String(value ?? '')
@@ -27,42 +29,22 @@
       .replace(/\[br\]/gi, '<br>');
 
     html = html.replace(/\[list=1\]([\s\S]*?)\[\/list\]/gi, (_, content) => {
-      const items = content
-        .split(/\[\*\]/g)
-        .map((item) => item.trim())
-        .filter(Boolean)
-        .map((item) => `<li>${item}</li>`)
-        .join('');
+      const items = content.split(/\[\*\]/g).map((item) => item.trim()).filter(Boolean).map((item) => `<li>${item}</li>`).join('');
       return `<ol>${items}</ol>`;
     });
 
     html = html.replace(/\[ol\]([\s\S]*?)\[\/ol\]/gi, (_, content) => {
-      const items = content
-        .split(/\[\*\]/g)
-        .map((item) => item.trim())
-        .filter(Boolean)
-        .map((item) => `<li>${item}</li>`)
-        .join('');
+      const items = content.split(/\[\*\]/g).map((item) => item.trim()).filter(Boolean).map((item) => `<li>${item}</li>`).join('');
       return `<ol>${items}</ol>`;
     });
 
     html = html.replace(/\[list\]([\s\S]*?)\[\/list\]/gi, (_, content) => {
-      const items = content
-        .split(/\[\*\]/g)
-        .map((item) => item.trim())
-        .filter(Boolean)
-        .map((item) => `<li>${item}</li>`)
-        .join('');
+      const items = content.split(/\[\*\]/g).map((item) => item.trim()).filter(Boolean).map((item) => `<li>${item}</li>`).join('');
       return `<ul>${items}</ul>`;
     });
 
     html = html.replace(/\[ul\]([\s\S]*?)\[\/ul\]/gi, (_, content) => {
-      const items = content
-        .split(/\[\*\]/g)
-        .map((item) => item.trim())
-        .filter(Boolean)
-        .map((item) => `<li>${item}</li>`)
-        .join('');
+      const items = content.split(/\[\*\]/g).map((item) => item.trim()).filter(Boolean).map((item) => `<li>${item}</li>`).join('');
       return `<ul>${items}</ul>`;
     });
 
@@ -120,9 +102,23 @@
     return tmp.textContent.trim();
   }
 
+  function setValueIfChanged(element, value) {
+    if (!element || element.value === value) return false;
+    element.value = value;
+    return true;
+  }
+
+  function setHtmlIfChanged(element, value) {
+    if (!element || element.innerHTML === value) return false;
+    element.innerHTML = value;
+    return true;
+  }
+
   function syncTextarea(textarea, editor) {
-    textarea.value = textToRichHtml(editor.innerHTML);
-    textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    const normalized = textToRichHtml(editor.innerHTML);
+    if (setValueIfChanged(textarea, normalized)) {
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    }
   }
 
   function exec(command) {
@@ -152,6 +148,9 @@
     textarea.dataset.richEditor = '1';
     textarea.classList.add('rich-editor-source');
 
+    const normalized = textToRichHtml(textarea.value);
+    setValueIfChanged(textarea, normalized);
+
     const shell = document.createElement('div');
     shell.className = 'rich-editor-shell';
     shell.dataset.for = textarea.id;
@@ -161,12 +160,11 @@
     surface.className = 'rich-editor-surface';
     surface.contentEditable = 'true';
     surface.dataset.placeholder = textarea.getAttribute('placeholder') || 'Écrire le contenu du rapport...';
-    surface.innerHTML = textToRichHtml(textarea.value);
+    surface.innerHTML = normalized;
 
     shell.appendChild(bar);
     shell.appendChild(surface);
     textarea.insertAdjacentElement('afterend', shell);
-    textarea.value = textToRichHtml(textarea.value);
 
     surface.addEventListener('focus', () => {
       activeTextarea = textarea;
@@ -278,7 +276,8 @@
     const modalSurface = modal.querySelector('.rich-editor-modal-body .rich-editor-surface');
 
     if (textarea && sourceSurface && modalSurface) {
-      sourceSurface.innerHTML = textToRichHtml(modalSurface.innerHTML);
+      const normalized = textToRichHtml(modalSurface.innerHTML);
+      setHtmlIfChanged(sourceSurface, normalized);
       syncTextarea(textarea, sourceSurface);
     }
 
@@ -287,13 +286,36 @@
   }
 
   function refreshEditors() {
-    EDITOR_IDS.forEach((id) => {
-      const textarea = document.querySelector(`#${id}`);
-      if (!textarea) return;
-      buildEditor(textarea);
-      const surface = textarea.nextElementSibling?.querySelector('.rich-editor-surface');
-      if (surface && document.activeElement !== surface) surface.innerHTML = textToRichHtml(textarea.value);
-      textarea.value = textToRichHtml(textarea.value);
+    if (isRefreshing) return;
+    isRefreshing = true;
+
+    try {
+      EDITOR_IDS.forEach((id) => {
+        const textarea = document.querySelector(`#${id}`);
+        if (!textarea) return;
+
+        buildEditor(textarea);
+
+        const surface = textarea.nextElementSibling?.querySelector('.rich-editor-surface');
+        const normalized = textToRichHtml(textarea.value);
+
+        setValueIfChanged(textarea, normalized);
+
+        if (surface && document.activeElement !== surface && surface !== activeEditor) {
+          setHtmlIfChanged(surface, normalized);
+        }
+      });
+    } finally {
+      isRefreshing = false;
+    }
+  }
+
+  function scheduleRefresh() {
+    if (refreshQueued) return;
+    refreshQueued = true;
+    window.requestAnimationFrame(() => {
+      refreshQueued = false;
+      refreshEditors();
     });
   }
 
@@ -302,14 +324,24 @@
     bbCodeToHtml,
     toHtml: textToRichHtml,
     toText: richToPlainText,
-    refresh: refreshEditors,
+    refresh: scheduleRefresh,
   };
 
-  const observer = new MutationObserver(refreshEditors);
+  const observer = new MutationObserver((mutations) => {
+    if (isRefreshing) return;
+
+    const shouldRefresh = mutations.some((mutation) => Array.from(mutation.addedNodes).some((node) => {
+      if (!(node instanceof HTMLElement)) return false;
+      return EDITOR_IDS.some((id) => node.id === id || Boolean(node.querySelector?.(`#${id}`)));
+    }));
+
+    if (shouldRefresh) scheduleRefresh();
+  });
+
   observer.observe(document.body, { childList: true, subtree: true });
   document.addEventListener('input', (event) => {
-    if (EDITOR_IDS.includes(event.target?.id)) refreshEditors();
+    if (EDITOR_IDS.includes(event.target?.id)) scheduleRefresh();
   });
-  document.addEventListener('DOMContentLoaded', refreshEditors);
-  setTimeout(refreshEditors, 0);
+  document.addEventListener('DOMContentLoaded', scheduleRefresh);
+  setTimeout(scheduleRefresh, 0);
 })();

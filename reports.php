@@ -132,6 +132,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   <script>
     window.MDT_CAN_REMOVE_REPORTS = <?= $canRemoveReports ? 'true' : 'false' ?>;
     window.MDT_CAN_EDIT_REPORT_STATUS = <?= $canEditReportStatus ? 'true' : 'false' ?>;
+    window.MDT_CAN_REDACT_REPORTS = <?= $canEditReportStatus ? 'true' : 'false' ?>;
     document.addEventListener('click', async (event) => {
       const button = event.target.closest('#removeReportButton');
       if (!button) return;
@@ -161,10 +162,12 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
     });
   </script>
   <script src="/reports.js?v=6"></script>
+  <script src="/reports-permissions-bootstrap.js?v=1"></script>
   <script src="/reports-rich-editor.js?v=1"></script>
   <script src="/reports-runtime-fixes.js?v=2"></script>
   <script src="/reports-arrestation-dossier.js?v=1"></script>
   <script src="/reports-status-editor.js?v=1"></script>
+  <script src="/reports-workflow-lock.js?v=1"></script>
   <script src="/reports-export-rich-preview.js?v=1"></script>
   <script src="/reports-export-preview.js?v=1"></script>
 </body>

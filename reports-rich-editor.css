@@ -1,0 +1,186 @@
+.rich-editor-shell {
+  display: grid;
+  gap: 0;
+  border: 1px solid rgba(154, 168, 189, .18);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .04);
+  overflow: hidden;
+}
+
+.rich-editor-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px;
+  border-bottom: 1px solid rgba(154, 168, 189, .12);
+  background: rgba(3, 7, 18, .24);
+}
+
+.rich-editor-toolbar button {
+  display: inline-grid;
+  place-items: center;
+  min-width: 30px;
+  height: 28px;
+  border: 1px solid rgba(154, 168, 189, .14);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .035);
+  color: var(--mdt-text);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.rich-editor-toolbar button:hover {
+  border-color: rgba(47, 128, 237, .45);
+  background: rgba(47, 128, 237, .14);
+}
+
+.rich-editor-toolbar .rich-editor-spacer {
+  flex: 1;
+}
+
+.rich-editor-toolbar .rich-editor-expand {
+  min-width: 34px;
+  color: #bfdbfe;
+}
+
+.rich-editor-surface {
+  min-height: 170px;
+  max-height: 420px;
+  overflow: auto;
+  padding: 11px 12px;
+  color: var(--mdt-text);
+  line-height: 1.45;
+  outline: none;
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: .92rem;
+  font-weight: 500;
+}
+
+.rich-editor-surface:empty::before {
+  content: attr(data-placeholder);
+  color: rgba(203, 213, 225, .45);
+}
+
+.rich-editor-surface p,
+.rich-editor-surface ul,
+.rich-editor-surface ol {
+  margin: 0 0 8px;
+}
+
+.rich-editor-surface ul,
+.rich-editor-surface ol {
+  padding-left: 22px;
+}
+
+.rich-editor-source {
+  display: none !important;
+}
+
+.rich-editor-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  background: rgba(3, 7, 18, .82);
+  backdrop-filter: blur(10px);
+  padding: 22px;
+}
+
+.rich-editor-modal[hidden] {
+  display: none !important;
+}
+
+.rich-editor-modal-card {
+  width: min(1100px, 100%);
+  height: min(820px, calc(100vh - 44px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  border: 1px solid rgba(154, 168, 189, .2);
+  border-radius: 18px;
+  background: #0b1220;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .48);
+  overflow: hidden;
+}
+
+.rich-editor-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(154, 168, 189, .14);
+}
+
+.rich-editor-modal-header strong {
+  color: var(--mdt-text);
+}
+
+.rich-editor-modal-close {
+  border: 1px solid rgba(154, 168, 189, .16);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .04);
+  color: var(--mdt-text);
+  padding: 8px 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.rich-editor-modal-body {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  min-height: 0;
+}
+
+.rich-editor-modal .rich-editor-surface {
+  min-height: 0;
+  max-height: none;
+  height: 100%;
+  padding: 18px;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, .025);
+}
+
+.fib-template-rich {
+  min-height: 330px;
+  white-space: normal;
+  border: 1px solid #111;
+  margin: 0;
+  padding: 7px;
+  background: rgba(255, 255, 255, .08);
+  line-height: 1.22;
+}
+
+.fib-template-rich p {
+  margin: 0 0 7px;
+}
+
+.fib-template-rich ul,
+.fib-template-rich ol {
+  margin: 0 0 7px;
+  padding-left: 18px;
+}
+
+.fib-template-rich li {
+  margin: 0 0 3px;
+}
+
+.fib-template-block.small .fib-template-rich {
+  min-height: 64px;
+}
+
+.fib-template-block.signature .fib-template-rich {
+  min-height: 80px;
+}
+
+@media (max-width: 760px) {
+  .rich-editor-modal {
+    padding: 10px;
+  }
+
+  .rich-editor-modal-card {
+    height: calc(100vh - 20px);
+  }
+}

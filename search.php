@@ -23,6 +23,8 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   <link rel="stylesheet" href="/mdt.css?v=7" />
   <link rel="stylesheet" href="/search.css?v=6" />
   <link rel="stylesheet" href="/reports.css?v=3" />
+  <link rel="stylesheet" href="/reports-rich-editor.css?v=1" />
+  <link rel="stylesheet" href="/reports-arrestation-dossier.css?v=1" />
   <link rel="stylesheet" href="/mdt-status-highlights.css?v=1" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">
@@ -72,9 +74,11 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
     </div>
   </template>
   <script>const logoutButton=document.querySelector('#logoutButton');logoutButton.addEventListener('click',async()=>{const response=await fetch('/api/logout.php',{method:'POST',credentials:'same-origin'});const result=await response.json();window.location.href=result.redirect||'/index.html';});</script>
+  <script src="/reports-rich-editor.js?v=1"></script>
   <script src="/search.js?v=7"></script>
   <script src="/search-status-fixes.js?v=1"></script>
   <script src="/search-linked-sections.js?v=2"></script>
   <script src="/search-service-notes.js?v=1"></script>
+  <script src="/search-linked-report-fixes.js?v=1"></script>
 </body>
 </html>

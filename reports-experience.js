@@ -15,12 +15,16 @@
     renseignement:'Source / origine :\n\nInformation collectée :\n\nAnalyse :\n\nNiveau de fiabilité :\n\nSuite recommandée :',
     patrouille:'Secteur patrouillé :\n\nEffectifs engagés :\n\nÉvénements notables :\n\nContrôles effectués :\n\nFin de patrouille :',
   };
+
   let filtersBound = false;
+  let filtersTimer = null;
   let autosaveTimer = null;
   let autosaveDirty = false;
   let lastAutosaveHash = '';
+  let listObserverBound = false;
 
   const $ = (id) => document.querySelector(`#${id}`);
+  const page = () => document.querySelector('.reports-page');
   const value = (id) => $(id)?.value?.trim() || '';
   const safe = (v) => String(v ?? '').replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#039;');
   const activeServiceCode = () => document.querySelector('.mdt-brand-title')?.textContent?.trim() || 'MDT';
@@ -47,6 +51,9 @@
     if (!response.ok || !result.success) throw new Error(result.message || 'Action refusée.');
     return result;
   }
+
+  function openFocusMode() { page()?.classList.add('report-focus-mode'); }
+  function closeFocusMode() { page()?.classList.remove('report-focus-mode'); }
 
   function reportEditable() {
     const id = Number(value('reportId') || 0);
@@ -80,20 +87,26 @@
     });
   }
 
+  function bindListObserver() {
+    if (listObserverBound || !$('reportsList')) return;
+    listObserverBound = true;
+    new MutationObserver(() => window.requestAnimationFrame(enhanceReportsList)).observe($('reportsList'), { childList: true });
+  }
+
   function injectFilters() {
     if (filtersBound || !document.querySelector('.reports-list-card')) return;
+    const m = meta();
+    if (!m.types?.length || !m.statuses?.length) return;
     filtersBound = true;
     const card = document.createElement('section');
     card.className = 'reports-filter-card';
     card.innerHTML = `<div class="reports-filter-row"><select id="filterReportType"><option value="">Type</option></select><select id="filterReportStatus"><option value="">Statut</option></select><select id="filterReportService"><option value="">Service</option></select><select id="filterReportClassification"><option value="">Classification</option></select><input id="filterReportDateFrom" type="date" title="Date de début"><input id="filterReportDateTo" type="date" title="Date de fin"></div><div class="reports-filter-row second"><input id="filterReportCreatedBy" type="search" placeholder="Créé par"><select id="filterReportSort"><option value="recent">Plus récent</option><option value="oldest">Plus ancien</option><option value="type">Type</option><option value="status">Statut</option><option value="service">Service</option></select><button type="button" id="resetReportFilters" class="mdt-button-secondary">Réinitialiser</button><input id="filterReportText" type="search" placeholder="Rechercher..."></div>`;
     document.querySelector('.reports-list-header')?.insertAdjacentElement('afterend', card);
-    const m = meta();
-    (m.types || []).forEach((item) => $('filterReportType').innerHTML += `<option value="${safe(item.code)}">${safe(item.label)}</option>`);
-    (m.statuses || []).forEach((item) => $('filterReportStatus').innerHTML += `<option value="${safe(item.code)}">${safe(item.label)}</option>`);
-    (m.services || [{ code: activeServiceCode(), label: activeServiceCode() }]).forEach((item) => $('filterReportService').innerHTML += `<option value="${safe(item.code)}">${safe(item.code)}</option>`);
-    (m.classifications || CLASSIFICATIONS.map(([code,text]) => ({code,label:text}))).forEach((item) => $('filterReportClassification').innerHTML += `<option value="${safe(item.code)}">${safe(item.label)}</option>`);
-    let timer = null;
-    card.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(loadFilteredReports, 250); });
+    m.types.forEach((item) => $('filterReportType').innerHTML += `<option value="${safe(item.code)}">${safe(item.label)}</option>`);
+    m.statuses.forEach((item) => $('filterReportStatus').innerHTML += `<option value="${safe(item.code)}">${safe(item.label)}</option>`);
+    (m.services?.length ? m.services : [{ code: activeServiceCode(), label: activeServiceCode() }]).forEach((item) => $('filterReportService').innerHTML += `<option value="${safe(item.code)}">${safe(item.code)}</option>`);
+    (m.classifications?.length ? m.classifications : CLASSIFICATIONS.map(([code,text]) => ({code,label:text}))).forEach((item) => $('filterReportClassification').innerHTML += `<option value="${safe(item.code)}">${safe(item.label)}</option>`);
+    card.addEventListener('input', () => { clearTimeout(filtersTimer); filtersTimer = setTimeout(loadFilteredReports, 250); });
     card.addEventListener('change', loadFilteredReports);
     $('resetReportFilters')?.addEventListener('click', () => { card.querySelectorAll('input,select').forEach((field) => field.value = ''); $('filterReportSort').value = 'recent'; loadFilteredReports(); });
   }
@@ -107,7 +120,7 @@
       const result = await jsonGet(`/api/report-list-simple.php?${params.toString()}`);
       setReportList(result.reports || []);
       window.renderReports?.();
-      setTimeout(enhanceReportsList, 0);
+      enhanceReportsList();
     } catch (error) { list.innerHTML = `<p class="reports-empty">${safe(error.message)}</p>`; }
   }
 
@@ -118,14 +131,13 @@
     wrapper.innerHTML = 'Niveau de classification<select id="reportClassification"></select><small id="reportClassificationHelp">Définit l’accès global du document.</small>';
     $('reportAccessScope')?.closest('label')?.insertAdjacentElement('afterend', wrapper);
     const m = meta();
-    (m.classifications || CLASSIFICATIONS.map(([code,text]) => ({code,label:text}))).forEach((item) => $('reportClassification').innerHTML += `<option value="${safe(item.code)}">${safe(item.label)}</option>`);
+    (m.classifications?.length ? m.classifications : CLASSIFICATIONS.map(([code,text]) => ({code,label:text}))).forEach((item) => $('reportClassification').innerHTML += `<option value="${safe(item.code)}">${safe(item.label)}</option>`);
     $('reportClassification').addEventListener('change', () => { updateClassificationHelp(); window.renderDocument?.(window.payload?.() || {}); });
   }
 
   function updateClassificationHelp() {
-    const help = $('reportClassificationHelp');
     const messages = { unclassified:'Accès normal selon la visibilité du rapport.', internal:'Visible par le service propriétaire.', confidential:'Visible par le service propriétaire et profils autorisés.', restricted_cs:'Visible uniquement par Command Staff / Director.', declassified:'Document déclassifié selon la visibilité définie.' };
-    if (help) help.textContent = messages[value('reportClassification')] || 'Définit l’accès global du document.';
+    if ($('reportClassificationHelp')) $('reportClassificationHelp').textContent = messages[value('reportClassification')] || 'Définit l’accès global du document.';
   }
 
   function injectWritingTools() {
@@ -234,6 +246,7 @@
 
   function sync() {
     injectFilters();
+    bindListObserver();
     enhanceReportsList();
     injectClassificationField();
     injectWritingTools();
@@ -256,6 +269,7 @@
   const baseFillReport = window.fillReport;
   window.fillReport = function fillReportWithExperience(report = null, extra = {}) {
     baseFillReport?.(report, extra);
+    openFocusMode();
     setTimeout(() => {
       injectClassificationField();
       if ($('reportClassification')) $('reportClassification').value = report?.classification_level || 'internal';
@@ -280,8 +294,13 @@
 
   document.addEventListener('input', (event) => { if (event.target.closest('.report-panel-inner')) { autosaveDirty = true; setTimeout(updateWritingTools, 0); } }, true);
   document.addEventListener('change', (event) => { if (event.target.closest('.report-panel-inner')) { autosaveDirty = true; setTimeout(sync, 0); } }, true);
-  document.addEventListener('click', (event) => { const citizen = event.target.closest('[data-open-citizen]'); if (citizen) window.location.href = `/search.php?citizen_id=${citizen.dataset.openCitizen}`; });
-  new MutationObserver(() => sync()).observe(document.body, { childList: true, subtree: true });
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('.report-row') || event.target.closest('#newReportButton')) openFocusMode();
+    if (event.target.closest('#cancelReportButton')) setTimeout(closeFocusMode, 0);
+    const citizen = event.target.closest('[data-open-citizen]');
+    if (citizen) window.location.href = `/search.php?citizen_id=${citizen.dataset.openCitizen}`;
+  }, true);
+
   document.addEventListener('DOMContentLoaded', () => setTimeout(sync, 50));
-  setTimeout(sync, 300);
+  [150, 400, 900, 1500].forEach((delay) => setTimeout(sync, delay));
 })();

@@ -14,14 +14,14 @@
       description: 'Ce rapport suit les règles de visibilité définies pour le document.',
     },
     internal: {
-      icon: '◈',
-      title: 'Document interne service — consultation encadrée',
-      description: 'Visible par le service propriétaire selon les accès du MDT.',
+      icon: 'INT',
+      title: 'Document interne {service} — consultation encadrée',
+      description: 'Ce document reste rattaché au service propriétaire. Consultation selon les accès MDT.',
     },
     confidential: {
-      icon: '◆',
-      title: 'Document confidentiel — diffusion limitée',
-      description: 'Consultation réservée aux profils autorisés et au service propriétaire.',
+      icon: '⚠',
+      title: 'Document confidentiel {service} — diffusion limitée',
+      description: 'Accès sensible. Lecture réservée au service propriétaire et aux profils explicitement autorisés.',
     },
     restricted_cs: {
       icon: 'CS',
@@ -64,6 +64,13 @@
     if (!document.querySelector('.report-panel-inner')) {
       reportsPage()?.classList.remove('report-focus-mode');
     }
+  }
+
+  function ownerServiceLabel() {
+    const fromGlobal = window.currentReportServiceCode || '';
+    const fromPdf = document.querySelector('#reportPdfSource')?.dataset.serviceCode || '';
+    const fromHeader = document.querySelector('#reportMetaView')?.textContent?.match(/\b(FIB|LSPD|SAMS|SAHP|BCSO|MDT)\b/i)?.[1] || '';
+    return String(fromGlobal || fromPdf || fromHeader || 'service propriétaire').toUpperCase();
   }
 
   function labelClassification(value) {
@@ -132,21 +139,24 @@
       if (title === 'classification') card.remove();
     });
 
+    document.querySelector('#reportLockNotice')?.remove();
+
     let banner = document.querySelector('#reportClassificationBanner');
     if (!banner) {
       banner = document.createElement('section');
       banner.id = 'reportClassificationBanner';
-      const after = document.querySelector('#reportLockNotice') || document.querySelector('#reportExperienceLockBanner') || document.querySelector('.report-document-header');
+      const after = document.querySelector('#reportExperienceLockBanner') || document.querySelector('.report-document-header');
       after?.insertAdjacentElement('afterend', banner);
     }
 
     const code = String(currentClassification || 'internal');
     const copy = CLASSIFICATION_COPY[code] || CLASSIFICATION_COPY.internal;
+    const service = ownerServiceLabel();
     banner.className = `report-classification-banner classification-${code}`;
     banner.innerHTML = `
       <div class="classification-banner-icon">${safe(copy.icon)}</div>
       <div class="classification-banner-copy">
-        <strong>${safe(copy.title)}</strong>
+        <strong>${safe(copy.title.replace('{service}', service))}</strong>
         <span>${safe(copy.description)}</span>
         <em>${safe(labelClassification(code))}</em>
       </div>

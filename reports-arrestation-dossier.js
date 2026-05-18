@@ -112,7 +112,6 @@
       rights_read: fieldValue('rightsRead'),
       rights_time: fieldValue('rightsTime'),
       search_done: fieldValue('searchDone'),
-      arrestation_status: fieldValue('arrestationStatus'),
       charges: fieldValue('chargesList'),
       seized_items: fieldValue('seizedItems'),
       custody_decision: fieldValue('custodyDecision'),
@@ -134,13 +133,12 @@
             <p class="mdt-kicker">Dossier d'arrestation</p>
             <h3>Informations spécifiques</h3>
           </div>
-          <small>Ces champs alimentent le template officiel.</small>
+          <small>Ces champs alimentent le template officiel. Le statut est géré par le workflow du rapport.</small>
         </div>
         <div class="report-form-grid two arrestation-grid">
           <label>Matricule agent<input id="arrestingMatricule" type="text" placeholder="FIB-01" /></label>
-          <label>Statut du dossier<select id="arrestationStatus"><option>Soumis</option><option>Brouillon</option><option>En attente validation</option><option>Validé</option><option>Classé</option><option>Archivé</option><option>Non renseigné</option></select></label>
-          <label class="wide">Motif principal<input id="mainCharge" type="text" placeholder="Refus d'obtempérer / port d'arme illégal" /></label>
           <label>Droits lus<select id="rightsRead"><option>Oui</option><option>Non</option><option>Non renseigné</option></select></label>
+          <label class="wide">Motif principal<input id="mainCharge" type="text" placeholder="Refus d'obtempérer / port d'arme illégal" /></label>
           <label>Heure de lecture des droits<input id="rightsTime" type="time" /></label>
           <label>Fouille effectuée<select id="searchDone"><option>Oui</option><option>Non</option><option>Non renseigné</option></select></label>
           <label>Objets saisis<input id="seizedItems" type="text" placeholder="Pistolet 9mm, chargeur..." /></label>
@@ -173,7 +171,6 @@
     setFieldValue('rightsRead', arrestationData.rights_read || 'Oui');
     setFieldValue('rightsTime', arrestationData.rights_time || '');
     setFieldValue('searchDone', arrestationData.search_done || 'Oui');
-    setFieldValue('arrestationStatus', arrestationData.arrestation_status || 'Soumis');
     setFieldValue('chargesList', arrestationData.charges || '');
     setFieldValue('seizedItems', arrestationData.seized_items || '');
     setFieldValue('custodyDecision', arrestationData.custody_decision || '');
@@ -224,7 +221,7 @@
         <div class="fib-template-grid three">
           <div><span>DROITS LUS</span><strong>${safe([data.rights_read || 'Non renseigné', data.rights_time].filter(Boolean).join(' - '))}</strong></div>
           <div><span>FOUILLE EFFECTUÉE</span><strong>${safe(data.search_done || 'Non renseigné')}</strong></div>
-          <div><span>STATUT DU DOSSIER</span><strong>${safe(data.arrestation_status || status || 'Non renseigné')}</strong></div>
+          <div><span>STATUT DU DOSSIER</span><strong>${safe(status || 'Non renseigné')}</strong></div>
         </div>
 
         <div class="fib-template-block arrestation-charges"><span>CHEFS D'ACCUSATION RETENUS</span><div class="charge-grid">${renderChargeBoxes(charges)}</div></div>

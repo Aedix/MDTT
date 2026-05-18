@@ -8,6 +8,14 @@
     return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
   }
 
+  function rich(value) {
+    if (window.MDTRichText?.toHtml) {
+      const html = window.MDTRichText.toHtml(value);
+      return html || 'Non renseigné';
+    }
+    return safe(value || 'Non renseigné');
+  }
+
   function getField(id) {
     return document.querySelector(`#${id}`);
   }
@@ -360,7 +368,7 @@
         </div>
 
         <div class="fib-template-block arrestation-charges"><span>CHEFS D'ACCUSATION RETENUS</span><div class="charge-grid">${renderChargeBoxes(charges)}</div></div>
-        <div class="fib-template-block arrestation-story"><span>RÉCIT DE L'ARRESTATION</span><p>${safe(report.facts || 'Non renseigné')}</p></div>
+        <div class="fib-template-block arrestation-story"><span>RÉCIT DE L'ARRESTATION</span><div class="fib-template-rich">${rich(report.facts)}</div></div>
         <div class="fib-template-block small"><span>OFFICIERS IMPLIQUÉS</span><p>${safe(officers)}</p></div>
         <div class="fib-template-grid two arrestation-decision-grid"><div><span>DÉCISION / SUITE DONNÉE</span><strong>${safe(data.custody_decision || report.conclusions || 'Non renseigné')}</strong></div><div><span>SIGNATURE OFFICIER</span><strong>${safe(report.created_by_username || currentReportCreatedBy || '')}</strong></div></div>
       </div>

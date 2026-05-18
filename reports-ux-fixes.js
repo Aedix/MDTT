@@ -7,6 +7,34 @@
     declassified: 'Déclassifié',
   };
 
+  const CLASSIFICATION_COPY = {
+    unclassified: {
+      icon: '◇',
+      title: 'Document non classifié — consultation standard',
+      description: 'Ce rapport suit les règles de visibilité définies pour le document.',
+    },
+    internal: {
+      icon: '◈',
+      title: 'Document interne service — consultation encadrée',
+      description: 'Visible par le service propriétaire selon les accès du MDT.',
+    },
+    confidential: {
+      icon: '◆',
+      title: 'Document confidentiel — diffusion limitée',
+      description: 'Consultation réservée aux profils autorisés et au service propriétaire.',
+    },
+    restricted_cs: {
+      icon: 'CS',
+      title: 'Document restreint Command Staff — accès sensible',
+      description: 'Consultation réservée au Command Staff / Director autorisé.',
+    },
+    declassified: {
+      icon: '◇',
+      title: 'Document déclassifié — version consultable',
+      description: 'Le document est consultable selon la visibilité définie, avec caviardage si nécessaire.',
+    },
+  };
+
   const LOG_LABELS = {
     create: 'Rapport créé',
     update: 'Rapport modifié',
@@ -108,16 +136,19 @@
     if (!banner) {
       banner = document.createElement('section');
       banner.id = 'reportClassificationBanner';
-      banner.className = 'report-classification-banner';
       const after = document.querySelector('#reportLockNotice') || document.querySelector('#reportExperienceLockBanner') || document.querySelector('.report-document-header');
       after?.insertAdjacentElement('afterend', banner);
     }
 
+    const code = String(currentClassification || 'internal');
+    const copy = CLASSIFICATION_COPY[code] || CLASSIFICATION_COPY.internal;
+    banner.className = `report-classification-banner classification-${code}`;
     banner.innerHTML = `
-      <div class="classification-banner-icon">◈</div>
-      <div>
-        <strong>Classification du document</strong>
-        <span>${safe(labelClassification(currentClassification))}</span>
+      <div class="classification-banner-icon">${safe(copy.icon)}</div>
+      <div class="classification-banner-copy">
+        <strong>${safe(copy.title)}</strong>
+        <span>${safe(copy.description)}</span>
+        <em>${safe(labelClassification(code))}</em>
       </div>
     `;
   }
@@ -160,12 +191,6 @@
     params.set('citizen_id', String(id));
     if (vehicleId) params.set('vehicle_id', String(vehicleId));
     window.location.href = `/search.php?${params.toString()}`;
-  }
-
-  function applyOpenedReportState(report = null) {
-    currentClassification = report?.classification_level || currentClassification || 'internal';
-    currentStatus = workflowKey(report?.status || document.querySelector('#reportStatus')?.value || currentStatus || 'submitted');
-    setTimeout(refreshConsultationCards, 60);
   }
 
   const baseFillReport = window.fillReport;

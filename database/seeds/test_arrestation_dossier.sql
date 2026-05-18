@@ -1,9 +1,17 @@
 -- Seed de test MDT: dossier d'arrestation complet.
 -- À exécuter uniquement sur l'environnement de test.
 -- Relançable: supprime/recrée le rapport FIB-AD-TEST-001.
+-- Fix collation: toutes les chaînes sensibles sont forcées en utf8mb4_unicode_ci pour éviter l'erreur SQL 1267.
 
-SET @test_report_number := 'FIB-AD-TEST-001';
-SET @service_code := 'FIB';
+SET NAMES utf8mb4 COLLATE utf8mb4_unicode_ci;
+SET collation_connection = 'utf8mb4_unicode_ci';
+
+SET @test_report_number := CONVERT('FIB-AD-TEST-001' USING utf8mb4) COLLATE utf8mb4_unicode_ci;
+SET @service_code := CONVERT('FIB' USING utf8mb4) COLLATE utf8mb4_unicode_ci;
+SET @suspect_first_name := CONVERT('Ethan' USING utf8mb4) COLLATE utf8mb4_unicode_ci;
+SET @suspect_last_name := CONVERT('Vargas' USING utf8mb4) COLLATE utf8mb4_unicode_ci;
+SET @suspect_birth_date := DATE('1994-04-18');
+SET @vehicle_plate := CONVERT('FIB-742' USING utf8mb4) COLLATE utf8mb4_unicode_ci;
 
 INSERT INTO report_types (code, label, description, sort_order, is_active) VALUES
   ('arrestation_dossier', 'Dossier d’arrestation', 'Document structuré pour les dossiers d’arrestation et d’interpellation.', 35, 1)
@@ -13,7 +21,16 @@ ON DUPLICATE KEY UPDATE
   sort_order = VALUES(sort_order),
   is_active = 1;
 
-DELETE FROM reports WHERE report_number = @test_report_number;
+SELECT id INTO @existing_report_id
+FROM reports
+WHERE report_number COLLATE utf8mb4_unicode_ci = @test_report_number
+LIMIT 1;
+
+DELETE FROM report_citizens WHERE report_id = @existing_report_id;
+DELETE FROM report_vehicles WHERE report_id = @existing_report_id;
+DELETE FROM report_agents WHERE report_id = @existing_report_id;
+DELETE FROM report_logs WHERE report_id = @existing_report_id;
+DELETE FROM reports WHERE id = @existing_report_id;
 
 SELECT id INTO @created_by_id
 FROM users
@@ -22,9 +39,9 @@ LIMIT 1;
 
 SELECT id INTO @suspect_id
 FROM citizens
-WHERE first_name = 'Ethan'
-  AND last_name = 'Vargas'
-  AND birth_date = '1994-04-18'
+WHERE first_name COLLATE utf8mb4_unicode_ci = @suspect_first_name
+  AND last_name COLLATE utf8mb4_unicode_ci = @suspect_last_name
+  AND birth_date = @suspect_birth_date
 LIMIT 1;
 
 INSERT INTO citizens (
@@ -46,9 +63,9 @@ INSERT INTO citizens (
   updated_by
 )
 SELECT
-  'Ethan',
-  'Vargas',
-  '1994-04-18',
+  @suspect_first_name,
+  @suspect_last_name,
+  @suspect_birth_date,
   '555-0148',
   'Alta Street, Los Santos',
   'Mécanicien indépendant',
@@ -66,9 +83,9 @@ WHERE @suspect_id IS NULL;
 
 SELECT id INTO @suspect_id
 FROM citizens
-WHERE first_name = 'Ethan'
-  AND last_name = 'Vargas'
-  AND birth_date = '1994-04-18'
+WHERE first_name COLLATE utf8mb4_unicode_ci = @suspect_first_name
+  AND last_name COLLATE utf8mb4_unicode_ci = @suspect_last_name
+  AND birth_date = @suspect_birth_date
 LIMIT 1;
 
 INSERT INTO citizen_vehicles (
@@ -83,7 +100,7 @@ INSERT INTO citizen_vehicles (
   updated_by
 ) VALUES (
   @suspect_id,
-  'FIB-742',
+  @vehicle_plate,
   'Dominator GTX',
   'Noir mat',
   'Muscle',
@@ -103,7 +120,7 @@ ON DUPLICATE KEY UPDATE
 
 SELECT id INTO @vehicle_id
 FROM citizen_vehicles
-WHERE plate = 'FIB-742'
+WHERE plate COLLATE utf8mb4_unicode_ci = @vehicle_plate
 LIMIT 1;
 
 INSERT INTO reports (
@@ -162,10 +179,12 @@ INSERT INTO reports (
 SET @report_id := LAST_INSERT_ID();
 
 INSERT INTO report_citizens (report_id, citizen_id, relation_type)
-VALUES (@report_id, @suspect_id, 'suspect');
+SELECT @report_id, @suspect_id, 'suspect'
+WHERE @suspect_id IS NOT NULL;
 
 INSERT INTO report_vehicles (report_id, vehicle_id, relation_type)
-VALUES (@report_id, @vehicle_id, 'involved');
+SELECT @report_id, @vehicle_id, 'involved'
+WHERE @vehicle_id IS NOT NULL;
 
 INSERT INTO report_agents (report_id, user_id, relation_type)
 SELECT @report_id, @created_by_id, 'lead_officer'

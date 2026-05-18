@@ -8,9 +8,17 @@ require_once __DIR__ . '/includes/permissions.php';
 $user = requireAuthenticatedUser();
 $canOpenPanel = canOpenManagementPanel($user);
 $userTechnicalRole = str_replace(['-', ' '], '_', strtolower(trim((string) ($user['role'] ?? ''))));
+$userRankCode = str_replace(['-', ' '], '_', strtolower(trim((string) ($user['active_rank_code'] ?? $user['rank_code'] ?? $user['active_rank_name'] ?? $user['rank_name'] ?? ''))));
+$userRankNameForPermission = strtolower(trim((string) ($user['active_rank_name'] ?? $user['rank_name'] ?? '')));
 $canRemoveReports = strtolower(trim((string) ($user['username'] ?? ''))) === 'admin'
     || in_array($userTechnicalRole, ['super_admin', 'superadmin'], true)
     || userHasPermission($user, '*');
+$canEditReportStatus = $canRemoveReports
+    || userHasPermission($user, 'reports.status.update')
+    || userHasMinimumRole($user, 'chief')
+    || str_contains($userRankCode, 'director')
+    || str_contains($userRankNameForPermission, 'director')
+    || str_contains($userRankNameForPermission, 'command staff');
 
 $activeServiceCode = (string) ($user['active_service_code'] ?? $user['service'] ?? 'MDT');
 $activeServiceName = (string) ($user['active_service_name'] ?? $activeServiceCode);
@@ -122,6 +130,7 @@ $activeServiceLogo = (string) ($user['active_service_logo'] ?? '');
   <script>document.querySelector('#logoutButton').addEventListener('click',async()=>{const response=await fetch('/api/logout.php',{method:'POST',credentials:'same-origin'});const result=await response.json();window.location.href=result.redirect||'/index.html';});</script>
   <script>
     window.MDT_CAN_REMOVE_REPORTS = <?= $canRemoveReports ? 'true' : 'false' ?>;
+    window.MDT_CAN_EDIT_REPORT_STATUS = <?= $canEditReportStatus ? 'true' : 'false' ?>;
     document.addEventListener('click', async (event) => {
       const button = event.target.closest('#removeReportButton');
       if (!button) return;

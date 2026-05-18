@@ -15,6 +15,10 @@
     event.stopPropagation();
     event.stopImmediatePropagation();
 
+    if (typeof window.renderDocument === 'function' && typeof window.payload === 'function') {
+      window.renderDocument(window.payload());
+    }
+
     const source = document.querySelector('#reportPdfSource');
     if (!source) return;
 
@@ -142,6 +146,66 @@
     .fib-template-block p { min-height: 93mm; }
     .fib-template-block.small p { min-height: 18mm; }
     .fib-template-block.signature p { min-height: 22mm; }
+    .arrestation-document-template {
+      padding: 6mm !important;
+      font-size: 9.2pt;
+    }
+    .arrestation-document-template .fib-template-header {
+      padding: 6px 18px;
+    }
+    .arrestation-document-template .fib-template-header em {
+      font-size: 18pt;
+    }
+    .arrestation-document-template .fib-template-header strong {
+      width: 118mm;
+      font-size: 17pt;
+    }
+    .arrestation-document-template .fib-template-logo {
+      width: 23mm !important;
+      height: 23mm !important;
+      min-width: 23mm !important;
+      min-height: 23mm !important;
+      max-width: 23mm !important;
+      max-height: 23mm !important;
+    }
+    .arrestation-document-template .fib-template-grid.two { grid-template-columns: 2fr 1fr; }
+    .arrestation-document-template .fib-template-grid.three { grid-template-columns: 1fr 1fr 1fr; }
+    .arrestation-document-template .fib-template-grid > div,
+    .arrestation-document-template .fib-template-block {
+      padding: 4px;
+    }
+    .arrestation-document-template .fib-template-grid strong {
+      min-height: 18px;
+      font-size: 8.8pt;
+    }
+    .arrestation-document-template .charge-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      border: 1px solid #111;
+      margin: 0;
+      padding: 4px;
+      min-height: 19mm;
+      background: rgba(255,255,255,.08);
+    }
+    .arrestation-document-template .charge-grid strong {
+      min-height: 17px;
+      border: 1px solid #111;
+      background: rgba(255,255,255,.14);
+      padding: 3px;
+      font-size: 8.5pt;
+    }
+    .arrestation-document-template .arrestation-story p {
+      min-height: 56mm;
+      font-size: 9pt;
+      line-height: 1.12;
+    }
+    .arrestation-document-template .fib-template-block.small p {
+      min-height: 12mm;
+    }
+    .arrestation-document-template .fib-template-grid.two:last-child strong {
+      min-height: 14mm;
+    }
     @media print {
       body { background: #d7d7d7; }
       .export-toolbar { display: none !important; }

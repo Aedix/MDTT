@@ -1,9 +1,32 @@
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+.mdt-shell,
+.mdt-main,
+.dossiers-page,
+.dossiers-hero,
+.dossiers-quick-row,
+.dossiers-workspace,
+.dossiers-browser,
+.dossiers-detail-panel {
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.dossiers-page {
+  overflow-x: hidden;
+}
+
 .dossiers-hero {
-  grid-template-columns: minmax(260px, 0.85fr) minmax(420px, 1.35fr);
+  grid-template-columns: minmax(260px, 0.85fr) minmax(360px, 1.35fr);
 }
 
 .dossiers-search {
-  max-width: 760px;
+  max-width: 720px;
   justify-self: end;
   width: 100%;
 }
@@ -15,17 +38,25 @@
 }
 
 .dossiers-workspace {
-  grid-template-columns: minmax(0, 1fr) 390px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 360px);
+  overflow: hidden;
+}
+
+.dossiers-browser,
+.dossiers-detail-panel {
+  overflow: hidden;
 }
 
 .dossiers-grid {
-  grid-template-columns: repeat(auto-fill, minmax(188px, 188px));
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   align-content: start;
   align-items: start;
+  max-width: 100%;
 }
 
 .dossier-item {
-  width: 188px;
+  width: 100%;
+  min-width: 0;
   min-height: 170px;
   max-height: 170px;
   display: flex;
@@ -40,6 +71,7 @@
 
 .dossier-item strong {
   width: 100%;
+  max-width: 100%;
   margin-top: 12px;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -48,6 +80,7 @@
 
 .dossier-item small {
   width: calc(100% - 46px);
+  max-width: calc(100% - 46px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -77,16 +110,25 @@
 
 .detail-header {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) max-content;
   align-items: flex-start;
+  overflow: hidden;
 }
 
 .detail-title-row {
   min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .detail-title-row > div {
   min-width: 0;
+  max-width: 100%;
+}
+
+.detail-title-row .folder-icon,
+.detail-title-row .file-detail-icon {
+  flex: 0 0 auto;
 }
 
 .detail-header h2 {
@@ -98,15 +140,28 @@
 
 .detail-actions-mini {
   flex: 0 0 auto;
+  max-width: 82px;
+  gap: 6px;
+}
+
+.detail-actions-mini button {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
 }
 
 .detail-footer-actions {
   flex-wrap: nowrap;
+  gap: 8px;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .detail-footer-actions button {
   flex: 1 1 0;
   min-width: 0;
+  width: auto;
+  height: 38px;
 }
 
 @media (max-width: 1320px) {
@@ -122,11 +177,20 @@
   .dossiers-workspace {
     grid-template-columns: 1fr;
   }
+
+  .dossiers-browser,
+  .dossiers-detail-panel {
+    min-height: auto;
+  }
 }
 
 @media (max-width: 860px) {
+  .dossiers-page {
+    padding: 18px;
+  }
+
   .dossiers-grid {
-    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    grid-template-columns: 1fr;
   }
 
   .dossier-item {

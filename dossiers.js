@@ -1,29 +1,43 @@
 (() => {
-  const items = {
-    'case-root': {
-      icon: 'folder', title: 'Dossier #FIB-2026-041', subtype: 'Dossier d’enquête', badge: 'Confidentiel',
-      description: 'Dossier relatif à l’enquête sur le trafic d’armes dans le sud de Los Santos.', owner: 'Agent Carter', service: 'FIB',
-      created: '17/05/2026 à 14:32', updated: '18/05/2026 à 16:45', tags: ['enquête', 'trafic d’armes', 'sud LS'], linked: 'Enquête #FIB-2026-041',
-      activity: ['16:45 · Agent Carter a modifié les accès', '16:20 · Agent Blake a ajouté 3 fichiers', '15:32 · Supervisor Lewis a consulté Camera_24.mp4'],
-      access: ['Restreint · Agents assignés', 'Agent Carter · Propriétaire', 'Agent Blake · Lecture / écriture', 'LSPD · Lecture seule']
-    },
-    proofs: { icon: 'folder', title: 'Preuves', subtype: 'Sous-dossier', badge: 'Restreint', description: 'Regroupe les éléments exploitables en enquête : images, vidéos, audios et documents.', owner: 'Agent Carter', service: 'FIB', created: '17/05/2026 à 15:02', updated: '18/05/2026 à 16:20', tags: ['preuves', 'enquête'], linked: 'Dossier #FIB-2026-041', activity: ['16:20 · 3 fichiers ajoutés', '14:11 · Dossier consulté'], access: ['Restreint · Service FIB', 'Supervision · Lecture / écriture'] },
-    reports: { icon: 'folder', title: 'Rapports', subtype: 'Sous-dossier', badge: 'Service', description: 'Rapports d’interrogatoire, constats et documents opérationnels liés au dossier.', owner: 'Agent Blake', service: 'FIB', created: '17/05/2026 à 15:04', updated: '18/05/2026 à 12:10', tags: ['rapports', 'pdf'], linked: 'Dossier #FIB-2026-041', activity: ['12:10 · Rapport interrogatoire importé'], access: ['Service FIB · Lecture', 'Agents assignés · Écriture'] },
-    photos: { icon: 'folder', title: 'Photos', subtype: 'Sous-dossier', badge: 'Restreint', description: 'Photos de scène, suspects, véhicules et captures visuelles associées.', owner: 'Agent Carter', service: 'FIB', created: '17/05/2026 à 15:05', updated: '18/05/2026 à 13:44', tags: ['photos', 'img', 'preuves'], linked: 'Dossier #FIB-2026-041', activity: ['13:44 · Photo_scene_01.jpg ajoutée'], access: ['Restreint · Agents assignés'] },
-    videos: { icon: 'folder', title: 'Vidéos', subtype: 'Sous-dossier', badge: 'Confidentiel', description: 'Bodycam, dashcam, caméras urbaines et fichiers vidéo volumineux.', owner: 'Supervisor Lewis', service: 'FIB', created: '17/05/2026 à 15:06', updated: '18/05/2026 à 15:32', tags: ['vidéos', 'mp4', 'caméra'], linked: 'Dossier #FIB-2026-041', activity: ['15:32 · Camera_24 consulté'], access: ['Confidentiel · Supervision + assignés'] },
-    audios: { icon: 'folder', title: 'Audios', subtype: 'Sous-dossier', badge: 'Restreint', description: 'Appels radio, 911, témoignages vocaux et interceptions validées RP.', owner: 'Agent Blake', service: 'FIB', created: '17/05/2026 à 15:07', updated: '17/05/2026 à 22:14', tags: ['audio', 'mp3'], linked: 'Dossier #FIB-2026-041', activity: ['22:14 · Enregistrement_911_01.mp3 ajouté'], access: ['Restreint · Service FIB'] },
-    'photo-scene': { icon: 'file', title: 'Photo_scene_01.jpg', subtype: 'Image', badge: 'IMG', description: 'Photo de scène importée comme élément visuel de preuve.', owner: 'Agent Blake', service: 'FIB', created: '18/05/2026 à 13:44', updated: '18/05/2026 à 13:44', tags: ['image', 'preuve'], linked: 'Photos', activity: ['13:44 · Fichier importé'], access: ['Restreint · Agents assignés'] },
-    'rapport-interrogatoire': { icon: 'file', title: 'Rapport_interrogatoire.pdf', subtype: 'Document PDF', badge: 'PDF', description: 'Rapport formalisé lié à un interrogatoire dans le cadre du dossier.', owner: 'Agent Carter', service: 'FIB', created: '18/05/2026 à 12:10', updated: '18/05/2026 à 12:10', tags: ['rapport', 'interrogatoire'], linked: 'Rapports', activity: ['12:10 · PDF importé'], access: ['Service FIB · Lecture', 'Propriétaire · Écriture'] },
-    'camera-video': { icon: 'file', title: 'Camera_24_18-05-2026.mp4', subtype: 'Vidéo', badge: 'MP4', description: 'Extrait vidéo provenant d’une caméra, durée 02:45.', owner: 'Supervisor Lewis', service: 'FIB', created: '18/05/2026 à 15:20', updated: '18/05/2026 à 15:32', tags: ['vidéo', 'caméra'], linked: 'Vidéos', activity: ['15:32 · Fichier consulté', '15:20 · Fichier importé'], access: ['Confidentiel · Supervision'] },
-    'audio-911': { icon: 'file', title: 'Enregistrement_911_01.mp3', subtype: 'Audio', badge: 'MP3', description: 'Enregistrement audio associé à un appel d’urgence.', owner: 'Agent Blake', service: 'FIB', created: '17/05/2026 à 22:14', updated: '17/05/2026 à 22:14', tags: ['audio', '911'], linked: 'Audios', activity: ['22:14 · Audio importé'], access: ['Restreint · Service FIB'] },
-    notes: { icon: 'file', title: 'Notes_rapides.txt', subtype: 'Texte', badge: 'TXT', description: 'Notes de travail rapides non validées comme rapport officiel.', owner: 'Agent Carter', service: 'FIB', created: '17/05/2026 à 21:03', updated: '17/05/2026 à 21:03', tags: ['notes', 'txt'], linked: 'Dossier #FIB-2026-041', activity: ['21:03 · Note créée'], access: ['Agents assignés · Lecture / écriture'] }
+  const state = {
+    parentId: null,
+    selected: null,
+    folders: [],
+    files: [],
+    breadcrumb: [],
+    serviceCode: 'MDT',
+    view: 'grid',
   };
 
   const grid = document.querySelector('#dossiersGrid');
   const searchInput = document.querySelector('#dossiersSearchInput');
   const feedback = document.querySelector('#dossierFeedback');
+  const breadcrumbEl = document.querySelector('.dossiers-breadcrumb');
+
+  function setFeedback(message, type = 'info') {
+    if (!feedback) return;
+    feedback.textContent = message || '';
+    feedback.dataset.type = type;
+  }
+
+  function formatDate(value) {
+    if (!value) return '—';
+    const date = new Date(String(value).replace(' ', 'T'));
+    if (Number.isNaN(date.getTime())) return String(value);
+    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' }) + ' à ' + date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  function confidentialityLabel(value) {
+    return {
+      private: 'Privé',
+      service: 'Service',
+      restricted: 'Restreint',
+      confidential: 'Confidentiel',
+    }[value] || 'Service';
+  }
 
   function renderChips(container, values) {
+    if (!container) return;
     container.innerHTML = '';
     values.forEach((value) => {
       const chip = document.createElement('span');
@@ -32,9 +46,63 @@
     });
   }
 
-  function selectItem(id) {
-    const data = items[id] || items['case-root'];
-    document.querySelectorAll('.dossier-item').forEach((item) => item.classList.toggle('is-selected', item.dataset.id === id));
+  async function requestJson(url, options = {}) {
+    const response = await fetch(url, {
+      credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+      ...options,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || payload.success === false) {
+      throw new Error(payload.message || 'Erreur de communication avec le serveur.');
+    }
+    return payload;
+  }
+
+  function folderToDetail(folder) {
+    return {
+      type: 'folder',
+      id: Number(folder.id),
+      title: folder.name || 'Dossier sans nom',
+      subtype: folder.category && folder.category !== 'general' ? folder.category : 'Dossier',
+      badge: confidentialityLabel(folder.confidentiality_level),
+      description: folder.description || 'Aucune description renseignée pour ce dossier.',
+      owner: folder.owner_username || 'Non défini',
+      service: folder.service_code || state.serviceCode,
+      created: formatDate(folder.created_at),
+      updated: formatDate(folder.updated_at),
+      tags: [folder.category || 'general', folder.status || 'active', confidentialityLabel(folder.confidentiality_level)],
+      linked: folder.parent_id ? `Dossier parent #${folder.parent_id}` : 'Racine du service',
+      activity: ['Activité détaillée prévue à l’étape logs.'],
+      access: [`Niveau : ${confidentialityLabel(folder.confidentiality_level)}`, `Service : ${folder.service_code || state.serviceCode}`, `Propriétaire : ${folder.owner_username || 'Non défini'}`],
+      foldersCount: Number(folder.folders_count || 0),
+      filesCount: Number(folder.files_count || 0),
+    };
+  }
+
+  function selectItem(item) {
+    const data = item || null;
+    state.selected = data;
+    document.querySelectorAll('.dossier-item').forEach((card) => {
+      card.classList.toggle('is-selected', data && card.dataset.id === String(data.id) && card.dataset.kind === data.type);
+    });
+
+    if (!data) {
+      document.querySelector('#detailTitle').textContent = 'Aucun élément sélectionné';
+      document.querySelector('#detailSubtype').textContent = 'Sélection';
+      document.querySelector('#detailBadge').textContent = '—';
+      document.querySelector('#detailDescription').textContent = 'Sélectionne un dossier pour afficher ses informations.';
+      document.querySelector('#detailOwner').textContent = '—';
+      document.querySelector('#detailService').textContent = state.serviceCode;
+      document.querySelector('#detailCreated').textContent = '—';
+      document.querySelector('#detailUpdated').textContent = '—';
+      document.querySelector('#detailLinked').textContent = '—';
+      renderChips(document.querySelector('#detailTags'), []);
+      renderChips(document.querySelector('#detailActivity'), []);
+      renderChips(document.querySelector('#detailAccess'), []);
+      return;
+    }
+
     document.querySelector('#detailTitle').textContent = data.title;
     document.querySelector('#detailSubtype').textContent = data.subtype;
     document.querySelector('#detailBadge').textContent = data.badge;
@@ -44,15 +112,147 @@
     document.querySelector('#detailCreated').textContent = data.created;
     document.querySelector('#detailUpdated').textContent = data.updated;
     document.querySelector('#detailLinked').textContent = data.linked;
-    document.querySelector('#detailIcon').className = data.icon === 'folder' ? 'folder-icon' : 'file-detail-icon';
+    document.querySelector('#detailIcon').className = 'folder-icon';
     renderChips(document.querySelector('#detailTags'), data.tags);
     renderChips(document.querySelector('#detailActivity'), data.activity);
     renderChips(document.querySelector('#detailAccess'), data.access);
   }
 
-  document.querySelectorAll('.dossier-item').forEach((item) => {
-    item.addEventListener('click', () => selectItem(item.dataset.id));
-  });
+  function createFolderCard(folder) {
+    const detail = folderToDetail(folder);
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'dossier-item folder';
+    card.dataset.id = String(detail.id);
+    card.dataset.kind = 'folder';
+    card.dataset.search = `${detail.title} ${detail.description} ${detail.tags.join(' ')}`;
+
+    const menu = document.createElement('span');
+    menu.className = 'item-menu';
+    menu.textContent = '⋮';
+
+    const icon = document.createElement('span');
+    icon.className = 'folder-icon';
+
+    const title = document.createElement('strong');
+    title.textContent = detail.title;
+
+    const meta = document.createElement('small');
+    const folders = detail.foldersCount > 0 ? `${detail.foldersCount} dossier${detail.foldersCount > 1 ? 's' : ''}` : '';
+    const files = detail.filesCount > 0 ? `${detail.filesCount} fichier${detail.filesCount > 1 ? 's' : ''}` : '';
+    meta.textContent = [folders, files].filter(Boolean).join(' · ') || confidentialityLabel(folder.confidentiality_level);
+
+    card.append(menu, icon, title, meta);
+    card.addEventListener('click', () => selectItem(detail));
+    card.addEventListener('dblclick', () => openFolder(detail.id));
+    return card;
+  }
+
+  function renderBreadcrumb() {
+    if (!breadcrumbEl) return;
+    breadcrumbEl.innerHTML = '';
+
+    const root = document.createElement('button');
+    root.type = 'button';
+    root.className = 'dossiers-breadcrumb-button';
+    root.textContent = state.serviceCode;
+    root.addEventListener('click', () => openFolder(null));
+    breadcrumbEl.appendChild(root);
+
+    state.breadcrumb.forEach((item) => {
+      const sep = document.createElement('span');
+      sep.textContent = '›';
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'dossiers-breadcrumb-button';
+      button.textContent = item.name;
+      button.addEventListener('click', () => openFolder(Number(item.id)));
+      breadcrumbEl.append(sep, button);
+    });
+  }
+
+  function renderGrid() {
+    if (!grid) return;
+    grid.innerHTML = '';
+    grid.dataset.view = state.view;
+
+    if (state.parentId !== null) {
+      const back = document.createElement('button');
+      back.type = 'button';
+      back.className = 'dossier-item folder dossier-back-card';
+      back.dataset.kind = 'back';
+      back.innerHTML = '<span class="folder-icon"></span><strong>Retour</strong><small>Dossier parent</small>';
+      const parent = state.breadcrumb.length >= 2 ? Number(state.breadcrumb[state.breadcrumb.length - 2].id) : null;
+      back.addEventListener('click', () => openFolder(parent));
+      grid.appendChild(back);
+    }
+
+    state.folders.forEach((folder) => grid.appendChild(createFolderCard(folder)));
+
+    if (state.folders.length === 0 && state.files.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'dossiers-empty-state';
+      empty.innerHTML = '<strong>Aucun dossier ici.</strong><span>Crée un premier dossier avec “+ Nouveau”.</span>';
+      grid.appendChild(empty);
+      selectItem(null);
+      return;
+    }
+
+    if (state.folders.length > 0) {
+      selectItem(folderToDetail(state.folders[0]));
+    } else {
+      selectItem(null);
+    }
+  }
+
+  async function loadFolders() {
+    const params = new URLSearchParams();
+    params.set('action', 'list');
+    if (state.parentId !== null) params.set('parent_id', String(state.parentId));
+    const query = searchInput?.value.trim() || '';
+    if (query !== '') params.set('q', query);
+
+    grid.innerHTML = '<div class="dossiers-empty-state"><strong>Chargement...</strong><span>Récupération des dossiers du service.</span></div>';
+
+    const payload = await requestJson(`/api/dossiers.php?${params.toString()}`);
+    state.serviceCode = payload.service_code || state.serviceCode;
+    state.folders = Array.isArray(payload.folders) ? payload.folders : [];
+    state.files = Array.isArray(payload.files) ? payload.files : [];
+    state.breadcrumb = Array.isArray(payload.breadcrumb) ? payload.breadcrumb : [];
+    renderBreadcrumb();
+    renderGrid();
+    setFeedback('');
+  }
+
+  async function openFolder(id) {
+    state.parentId = id === null || id === undefined ? null : Number(id);
+    await loadFolders().catch((error) => setFeedback(error.message, 'error'));
+  }
+
+  async function createFolder() {
+    const name = window.prompt('Nom du dossier à créer :');
+    if (!name || !name.trim()) return;
+
+    const description = window.prompt('Description optionnelle :') || '';
+    const confidentiality = window.prompt('Niveau d’accès : private, service, restricted, confidential', 'service') || 'service';
+
+    try {
+      setFeedback('Création du dossier en cours...');
+      await requestJson('/api/dossiers.php?action=create-folder', {
+        method: 'POST',
+        body: JSON.stringify({
+          name: name.trim(),
+          description: description.trim(),
+          confidentiality_level: confidentiality.trim(),
+          parent_id: state.parentId,
+        }),
+      });
+      setFeedback('Dossier créé avec succès.', 'success');
+      await loadFolders();
+    } catch (error) {
+      setFeedback(error.message, 'error');
+    }
+  }
 
   document.querySelectorAll('.detail-tabs button').forEach((tab) => {
     tab.addEventListener('click', () => {
@@ -64,23 +264,22 @@
   document.querySelectorAll('.dossiers-view-toggle button').forEach((button) => {
     button.addEventListener('click', () => {
       document.querySelectorAll('.dossiers-view-toggle button').forEach((current) => current.classList.toggle('is-active', current === button));
-      grid.dataset.view = button.dataset.view;
+      state.view = button.dataset.view || 'grid';
+      grid.dataset.view = state.view;
     });
   });
 
   document.querySelectorAll('.dossiers-quick-card').forEach((card) => {
     card.addEventListener('click', () => {
       document.querySelectorAll('.dossiers-quick-card').forEach((current) => current.classList.toggle('is-active', current === card));
-      feedback.textContent = `Vue préparée : ${card.querySelector('strong')?.textContent || 'raccourci'}.`;
+      setFeedback(`Vue préparée : ${card.querySelector('strong')?.textContent || 'raccourci'}.`);
     });
   });
 
+  let searchTimeout = null;
   searchInput?.addEventListener('input', () => {
-    const query = searchInput.value.trim().toLowerCase();
-    document.querySelectorAll('.dossier-item').forEach((item) => {
-      const haystack = `${item.textContent} ${item.dataset.search || ''}`.toLowerCase();
-      item.hidden = query !== '' && !haystack.includes(query);
-    });
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(() => loadFolders().catch((error) => setFeedback(error.message, 'error')), 250);
   });
 
   document.addEventListener('keydown', (event) => {
@@ -90,13 +289,14 @@
     }
   });
 
-  document.querySelector('#newDossierButton')?.addEventListener('click', () => {
-    feedback.textContent = 'Action préparée : futur menu de création dossier / import fichier.';
-  });
-
+  document.querySelector('#newDossierButton')?.addEventListener('click', createFolder);
   document.querySelector('#manageAccessButton')?.addEventListener('click', () => {
-    feedback.textContent = 'Action préparée : future gestion des permissions et accès.';
+    setFeedback('Gestion des accès prévue dans une prochaine étape.');
   });
 
-  selectItem('case-root');
+  loadFolders().catch((error) => {
+    setFeedback(error.message, 'error');
+    grid.innerHTML = '<div class="dossiers-empty-state"><strong>Module dossiers non initialisé.</strong><span>Vérifie que la migration SQL 023_dossiers_module.sql a bien été exécutée.</span></div>';
+    selectItem(null);
+  });
 })();

@@ -108,6 +108,23 @@ body {
   overflow: hidden;
 }
 
+.dossier-item.is-sortable-card {
+  cursor: grab;
+}
+
+.dossier-item.is-dragging-card {
+  opacity: 0.45;
+  cursor: grabbing;
+}
+
+.dossier-item.is-drop-before {
+  box-shadow: -7px 0 0 rgba(124, 58, 237, 0.95), 0 24px 55px rgba(0, 0, 0, 0.34);
+}
+
+.dossier-item.is-drop-after {
+  box-shadow: 7px 0 0 rgba(124, 58, 237, 0.95), 0 24px 55px rgba(0, 0, 0, 0.34);
+}
+
 .dossier-item.is-deleted {
   opacity: 0.78;
   border-color: rgba(255, 107, 107, 0.35);
@@ -115,6 +132,43 @@ body {
 
 .dossier-item.is-archived {
   border-color: rgba(245, 197, 66, 0.32);
+}
+
+.dossier-item .item-menu {
+  display: none !important;
+}
+
+.folder-logo-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  min-width: 34px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 7px;
+  border: 1px solid rgba(139, 160, 190, 0.24);
+  border-radius: 9px;
+  color: #dbe7ff;
+  background: rgba(6, 13, 24, 0.72);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.25);
+}
+
+.folder-logo-badge[data-logo="crime"] {
+  border-color: rgba(255, 99, 132, 0.35);
+  color: #ffd6df;
+  background: rgba(90, 18, 38, 0.35);
+}
+
+.folder-logo-badge[data-logo="fib"],
+.folder-logo-badge[data-logo="service"] {
+  border-color: rgba(96, 165, 250, 0.35);
+  color: #dbeafe;
+  background: rgba(30, 64, 175, 0.28);
 }
 
 .dossier-item strong,
@@ -375,6 +429,12 @@ body {
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
 }
 
+.dossiers-logo-config {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  gap: 12px;
+}
+
 .dossiers-drawer-footer button,
 .dossiers-modal-footer button,
 .dossiers-confirm button {
@@ -537,6 +597,101 @@ body {
   background: rgba(255, 255, 255, 0.025);
 }
 
+.dossiers-preview-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 130;
+  display: grid;
+  place-items: center;
+  padding: 26px;
+  background: rgba(1, 5, 12, 0.78);
+  backdrop-filter: blur(10px);
+}
+
+.dossiers-preview-window {
+  width: min(980px, calc(100vw - 46px));
+  max-height: calc(100vh - 52px);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  border: 1px solid rgba(139, 160, 190, 0.25);
+  border-radius: 22px;
+  background: rgba(8, 14, 25, 0.98);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+
+.dossiers-preview-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(139, 160, 190, 0.16);
+}
+
+.dossiers-preview-header h3,
+.dossiers-preview-header p {
+  margin: 0;
+}
+
+.dossiers-preview-header h3 {
+  color: var(--mdt-text);
+  font-size: 1.05rem;
+}
+
+.dossiers-preview-header p {
+  margin-top: 4px;
+  color: var(--mdt-muted);
+  font-size: 0.78rem;
+}
+
+.dossiers-preview-header button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(139, 160, 190, 0.2);
+  border-radius: 10px;
+  color: var(--mdt-muted);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+}
+
+.dossiers-preview-body {
+  min-height: 420px;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.22);
+  overflow: auto;
+}
+
+.dossiers-preview-media {
+  max-width: 100%;
+  max-height: 70vh;
+  border-radius: 14px;
+}
+
+.dossiers-preview-frame {
+  width: 100%;
+  height: 70vh;
+  border: none;
+  border-radius: 14px;
+  background: white;
+}
+
+.dossiers-preview-window footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 16px;
+  border-top: 1px solid rgba(139, 160, 190, 0.16);
+}
+
+.dossiers-preview-window footer a {
+  padding: 10px 14px;
+  border-radius: 12px;
+  color: #fff;
+  text-decoration: none;
+  background: linear-gradient(135deg, #2f80ed, #7c3aed);
+}
+
 .dossiers-toast {
   position: fixed;
   top: 24px;
@@ -603,5 +758,9 @@ body {
     right: 16px;
     left: 16px;
     width: auto;
+  }
+
+  .dossiers-logo-config {
+    grid-template-columns: 1fr;
   }
 }

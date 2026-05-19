@@ -1,0 +1,135 @@
+.dossiers-hero {
+  grid-template-columns: minmax(260px, 0.85fr) minmax(420px, 1.35fr);
+}
+
+.dossiers-search {
+  max-width: 760px;
+  justify-self: end;
+  width: 100%;
+}
+
+.dossiers-profile-actions,
+.dossiers-user-card,
+.dossiers-icon-button {
+  display: none !important;
+}
+
+.dossiers-workspace {
+  grid-template-columns: minmax(0, 1fr) 390px;
+}
+
+.dossiers-grid {
+  grid-template-columns: repeat(auto-fill, minmax(188px, 188px));
+  align-content: start;
+  align-items: start;
+}
+
+.dossier-item {
+  width: 188px;
+  min-height: 170px;
+  max-height: 170px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  overflow: hidden;
+}
+
+.dossier-item.file {
+  padding-bottom: 34px;
+}
+
+.dossier-item strong {
+  width: 100%;
+  margin-top: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dossier-item small {
+  width: calc(100% - 46px);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-preview {
+  flex: 0 0 86px;
+  width: 100%;
+  height: 86px;
+  min-height: 86px;
+  max-height: 86px;
+}
+
+.audio-preview i {
+  width: 78%;
+  height: 48px;
+  mask: linear-gradient(to bottom, transparent 0 4%, black 28% 72%, transparent 96%);
+}
+
+.dossier-item.is-selected {
+  transform: none;
+}
+
+.dossier-item.is-selected:hover {
+  transform: translateY(-1px);
+}
+
+.detail-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: flex-start;
+}
+
+.detail-title-row {
+  min-width: 0;
+}
+
+.detail-title-row > div {
+  min-width: 0;
+}
+
+.detail-header h2 {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.2;
+}
+
+.detail-actions-mini {
+  flex: 0 0 auto;
+}
+
+.detail-footer-actions {
+  flex-wrap: nowrap;
+}
+
+.detail-footer-actions button {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+@media (max-width: 1320px) {
+  .dossiers-hero {
+    grid-template-columns: 1fr;
+  }
+
+  .dossiers-search {
+    justify-self: stretch;
+    max-width: none;
+  }
+
+  .dossiers-workspace {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 860px) {
+  .dossiers-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  }
+
+  .dossier-item {
+    width: 100%;
+  }
+}

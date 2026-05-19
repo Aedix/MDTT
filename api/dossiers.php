@@ -55,6 +55,11 @@ function normalizeConfidentiality(?string $value): string
     return in_array($value, ['private', 'service', 'restricted', 'confidential'], true) ? $value : 'service';
 }
 
+function normalizeTargetType(?string $value): string
+{
+    return $value === 'file' ? 'file' : 'folder';
+}
+
 function addDossierLog(PDO $pdo, ?int $serviceId, string $serviceCode, string $targetType, int $targetId, string $action, array $details, int $userId): void
 {
     try {
@@ -69,11 +74,22 @@ function addDossierLog(PDO $pdo, ?int $serviceId, string $serviceCode, string $t
             'target_id' => $targetId,
             'action' => $action,
             'details' => json_encode($details, JSON_UNESCAPED_UNICODE),
-            'created_by' => $userId,
+            'created_by' => $userId ?: null,
         ]);
-    } catch (Throwable $exception) {
-        // Logs must never block the main action.
-    }
+    } catch (Throwable $exception) {}
+}
+
+function recordRecentView(PDO $pdo, int $userId, string $targetType, int $targetId): void
+{
+    if ($userId <= 0) return;
+    try {
+        $statement = $pdo->prepare(
+            'INSERT INTO dossier_recent_views (user_id, target_type, target_id, viewed_at)
+             VALUES (:user_id, :target_type, :target_id, NOW())
+             ON DUPLICATE KEY UPDATE viewed_at = NOW()'
+        );
+        $statement->execute(['user_id' => $userId, 'target_type' => $targetType, 'target_id' => $targetId]);
+    } catch (Throwable $exception) {}
 }
 
 function fetchFolder(PDO $pdo, int $id, string $serviceCode): ?array
@@ -81,7 +97,7 @@ function fetchFolder(PDO $pdo, int $id, string $serviceCode): ?array
     $statement = $pdo->prepare(
         'SELECT f.*, owner.username AS owner_username,
                 (SELECT COUNT(*) FROM dossier_folders child WHERE child.parent_id = f.id AND child.deleted_at IS NULL) AS folders_count,
-                0 AS files_count
+                (SELECT COUNT(*) FROM dossier_files file WHERE file.folder_id = f.id AND file.deleted_at IS NULL) AS files_count
          FROM dossier_folders f
          LEFT JOIN users owner ON owner.id = f.owner_user_id
          WHERE f.id = :id
@@ -89,20 +105,30 @@ function fetchFolder(PDO $pdo, int $id, string $serviceCode): ?array
            AND f.deleted_at IS NULL
          LIMIT 1'
     );
-    $statement->execute([
-        'id' => $id,
-        'service_code' => $serviceCode,
-    ]);
+    $statement->execute(['id' => $id, 'service_code' => $serviceCode]);
     $folder = $statement->fetch();
     return $folder ?: null;
 }
 
+function fetchFileRow(PDO $pdo, int $id, string $serviceCode, bool $includeDeleted = false): ?array
+{
+    $whereDeleted = $includeDeleted ? '' : ' AND df.deleted_at IS NULL';
+    $statement = $pdo->prepare(
+        'SELECT df.*, owner.username AS owner_username
+         FROM dossier_files df
+         LEFT JOIN users owner ON owner.id = df.owner_user_id
+         WHERE df.id = :id
+           AND df.service_code = :service_code' . $whereDeleted . '
+         LIMIT 1'
+    );
+    $statement->execute(['id' => $id, 'service_code' => $serviceCode]);
+    $file = $statement->fetch();
+    return $file ?: null;
+}
+
 function buildBreadcrumb(PDO $pdo, ?int $folderId, string $serviceCode): array
 {
-    if (!$folderId) {
-        return [];
-    }
-
+    if (!$folderId) return [];
     $items = [];
     $currentId = $folderId;
     $guard = 0;
@@ -110,31 +136,110 @@ function buildBreadcrumb(PDO $pdo, ?int $folderId, string $serviceCode): array
     while ($currentId && $guard < 20) {
         $guard++;
         $statement = $pdo->prepare(
-            'SELECT id, parent_id, name
-             FROM dossier_folders
-             WHERE id = :id
-               AND service_code = :service_code
-               AND deleted_at IS NULL
-             LIMIT 1'
+            'SELECT id, parent_id, name FROM dossier_folders
+             WHERE id = :id AND service_code = :service_code AND deleted_at IS NULL LIMIT 1'
         );
-        $statement->execute([
-            'id' => $currentId,
-            'service_code' => $serviceCode,
-        ]);
+        $statement->execute(['id' => $currentId, 'service_code' => $serviceCode]);
         $folder = $statement->fetch();
-
-        if (!$folder) {
-            break;
-        }
-
-        array_unshift($items, [
-            'id' => (int) $folder['id'],
-            'name' => (string) $folder['name'],
-        ]);
+        if (!$folder) break;
+        array_unshift($items, ['id' => (int) $folder['id'], 'name' => (string) $folder['name']]);
         $currentId = $folder['parent_id'] !== null ? (int) $folder['parent_id'] : null;
     }
 
     return $items;
+}
+
+function fetchLogs(PDO $pdo, string $serviceCode, string $targetType, int $targetId): array
+{
+    try {
+        $statement = $pdo->prepare(
+            'SELECT l.*, u.username AS created_by_username
+             FROM dossier_activity_logs l
+             LEFT JOIN users u ON u.id = l.created_by
+             WHERE l.service_code = :service_code
+               AND l.target_type = :target_type
+               AND l.target_id = :target_id
+             ORDER BY l.created_at DESC
+             LIMIT 30'
+        );
+        $statement->execute(['service_code' => $serviceCode, 'target_type' => $targetType, 'target_id' => $targetId]);
+        return $statement->fetchAll();
+    } catch (Throwable $exception) {
+        return [];
+    }
+}
+
+function fetchPermissions(PDO $pdo, string $targetType, int $targetId): array
+{
+    try {
+        $statement = $pdo->prepare(
+            'SELECT * FROM dossier_permissions
+             WHERE target_type = :target_type AND target_id = :target_id
+             ORDER BY subject_type ASC, subject_value ASC, permission ASC
+             LIMIT 80'
+        );
+        $statement->execute(['target_type' => $targetType, 'target_id' => $targetId]);
+        return $statement->fetchAll();
+    } catch (Throwable $exception) {
+        return [];
+    }
+}
+
+function fetchTags(PDO $pdo, string $targetType, int $targetId): array
+{
+    try {
+        $statement = $pdo->prepare(
+            'SELECT t.name
+             FROM dossier_tag_links tl
+             INNER JOIN dossier_tags t ON t.id = tl.tag_id
+             WHERE tl.target_type = :target_type AND tl.target_id = :target_id
+             ORDER BY t.name ASC'
+        );
+        $statement->execute(['target_type' => $targetType, 'target_id' => $targetId]);
+        return array_map(static fn (array $row): string => (string) $row['name'], $statement->fetchAll());
+    } catch (Throwable $exception) {
+        return [];
+    }
+}
+
+function replaceTags(PDO $pdo, string $serviceCode, int $userId, string $targetType, int $targetId, array $tags): void
+{
+    $pdo->prepare('DELETE FROM dossier_tag_links WHERE target_type = :target_type AND target_id = :target_id')
+        ->execute(['target_type' => $targetType, 'target_id' => $targetId]);
+
+    foreach ($tags as $tag) {
+        $name = mb_substr(trim((string) $tag), 0, 60);
+        if ($name === '') continue;
+        $insert = $pdo->prepare(
+            'INSERT INTO dossier_tags (service_code, name, created_by)
+             VALUES (:service_code, :name, :created_by)
+             ON DUPLICATE KEY UPDATE name = VALUES(name)'
+        );
+        $insert->execute(['service_code' => $serviceCode, 'name' => $name, 'created_by' => $userId ?: null]);
+        $tagIdStatement = $pdo->prepare('SELECT id FROM dossier_tags WHERE service_code = :service_code AND name = :name LIMIT 1');
+        $tagIdStatement->execute(['service_code' => $serviceCode, 'name' => $name]);
+        $tagId = (int) $tagIdStatement->fetchColumn();
+        if ($tagId > 0) {
+            $link = $pdo->prepare(
+                'INSERT IGNORE INTO dossier_tag_links (tag_id, target_type, target_id)
+                 VALUES (:tag_id, :target_type, :target_id)'
+            );
+            $link->execute(['tag_id' => $tagId, 'target_type' => $targetType, 'target_id' => $targetId]);
+        }
+    }
+}
+
+function uploadErrorMessage(int $error): string
+{
+    return [
+        UPLOAD_ERR_INI_SIZE => 'Fichier trop lourd pour la configuration serveur.',
+        UPLOAD_ERR_FORM_SIZE => 'Fichier trop lourd pour le formulaire.',
+        UPLOAD_ERR_PARTIAL => 'Upload incomplet.',
+        UPLOAD_ERR_NO_FILE => 'Aucun fichier envoyé.',
+        UPLOAD_ERR_NO_TMP_DIR => 'Dossier temporaire serveur manquant.',
+        UPLOAD_ERR_CANT_WRITE => 'Impossible d’écrire le fichier sur le serveur.',
+        UPLOAD_ERR_EXTENSION => 'Upload bloqué par une extension serveur.',
+    ][$error] ?? 'Upload impossible.';
 }
 
 try {
@@ -146,55 +251,114 @@ try {
         $parentIdRaw = trim((string) ($_GET['parent_id'] ?? ''));
         $parentId = $parentIdRaw === '' || $parentIdRaw === 'root' ? null : (int) $parentIdRaw;
         $query = trim((string) ($_GET['q'] ?? ''));
+        $view = trim((string) ($_GET['view'] ?? 'all'));
 
-        $params = ['service_code' => $serviceCode];
-        $where = 'f.service_code = :service_code AND f.deleted_at IS NULL';
+        $folderParams = ['service_code' => $serviceCode];
+        $folderWhere = 'f.service_code = :service_code';
+        $fileParams = ['service_code' => $serviceCode];
+        $fileWhere = 'df.service_code = :service_code';
 
-        if ($parentId !== null && $parentId > 0) {
-            $where .= ' AND f.parent_id = :parent_id';
-            $params['parent_id'] = $parentId;
+        if ($view === 'trash') {
+            $folderWhere .= ' AND f.deleted_at IS NOT NULL';
+            $fileWhere .= ' AND df.deleted_at IS NOT NULL';
+        } elseif ($view === 'favorite') {
+            $folderWhere .= ' AND f.deleted_at IS NULL AND EXISTS (SELECT 1 FROM dossier_favorites fav WHERE fav.user_id = :fav_user_id_f AND fav.target_type = "folder" AND fav.target_id = f.id)';
+            $fileWhere .= ' AND df.deleted_at IS NULL AND EXISTS (SELECT 1 FROM dossier_favorites fav WHERE fav.user_id = :fav_user_id_file AND fav.target_type = "file" AND fav.target_id = df.id)';
+            $folderParams['fav_user_id_f'] = $userId;
+            $fileParams['fav_user_id_file'] = $userId;
+        } elseif ($view === 'recent') {
+            $folderWhere .= ' AND f.deleted_at IS NULL AND EXISTS (SELECT 1 FROM dossier_recent_views rv WHERE rv.user_id = :recent_user_id_f AND rv.target_type = "folder" AND rv.target_id = f.id)';
+            $fileWhere .= ' AND df.deleted_at IS NULL AND EXISTS (SELECT 1 FROM dossier_recent_views rv WHERE rv.user_id = :recent_user_id_file AND rv.target_type = "file" AND rv.target_id = df.id)';
+            $folderParams['recent_user_id_f'] = $userId;
+            $fileParams['recent_user_id_file'] = $userId;
         } else {
-            $where .= ' AND f.parent_id IS NULL';
+            $folderWhere .= ' AND f.deleted_at IS NULL';
+            $fileWhere .= ' AND df.deleted_at IS NULL';
+            if ($parentId !== null && $parentId > 0) {
+                $folderWhere .= ' AND f.parent_id = :parent_id';
+                $fileWhere .= ' AND df.folder_id = :folder_id';
+                $folderParams['parent_id'] = $parentId;
+                $fileParams['folder_id'] = $parentId;
+            } else {
+                $folderWhere .= ' AND f.parent_id IS NULL';
+                $fileWhere .= ' AND df.folder_id IS NULL';
+            }
         }
 
         if ($query !== '') {
-            $where .= ' AND (f.name LIKE :query OR f.description LIKE :query OR f.category LIKE :query)';
-            $params['query'] = '%' . $query . '%';
+            $folderWhere .= ' AND (f.name LIKE :query OR f.description LIKE :query OR f.category LIKE :query)';
+            $fileWhere .= ' AND (df.original_name LIKE :query OR df.description LIKE :query OR df.extension LIKE :query)';
+            $folderParams['query'] = '%' . $query . '%';
+            $fileParams['query'] = '%' . $query . '%';
         }
 
-        $statement = $pdo->prepare(
+        $foldersStatement = $pdo->prepare(
             'SELECT f.*, owner.username AS owner_username,
                     (SELECT COUNT(*) FROM dossier_folders child WHERE child.parent_id = f.id AND child.deleted_at IS NULL) AS folders_count,
-                    0 AS files_count
+                    (SELECT COUNT(*) FROM dossier_files file WHERE file.folder_id = f.id AND file.deleted_at IS NULL) AS files_count,
+                    EXISTS (SELECT 1 FROM dossier_favorites fav WHERE fav.user_id = :current_user_id AND fav.target_type = "folder" AND fav.target_id = f.id) AS is_favorite
              FROM dossier_folders f
              LEFT JOIN users owner ON owner.id = f.owner_user_id
-             WHERE ' . $where . '
+             WHERE ' . $folderWhere . '
              ORDER BY f.updated_at DESC, f.name ASC
              LIMIT 120'
         );
-        $statement->execute($params);
+        $foldersStatement->execute(['current_user_id' => $userId] + $folderParams);
+
+        $filesStatement = $pdo->prepare(
+            'SELECT df.*, owner.username AS owner_username,
+                    EXISTS (SELECT 1 FROM dossier_favorites fav WHERE fav.user_id = :current_user_id AND fav.target_type = "file" AND fav.target_id = df.id) AS is_favorite
+             FROM dossier_files df
+             LEFT JOIN users owner ON owner.id = df.owner_user_id
+             WHERE ' . $fileWhere . '
+             ORDER BY df.updated_at DESC, df.original_name ASC
+             LIMIT 160'
+        );
+        $filesStatement->execute(['current_user_id' => $userId] + $fileParams);
 
         dossiersJson([
             'success' => true,
             'service_code' => $serviceCode,
             'parent_id' => $parentId,
+            'view' => $view,
             'breadcrumb' => buildBreadcrumb($pdo, $parentId, $serviceCode),
-            'folders' => $statement->fetchAll(),
-            'files' => [],
+            'folders' => $foldersStatement->fetchAll(),
+            'files' => $filesStatement->fetchAll(),
         ]);
     }
 
     if ($method === 'GET' && $action === 'get') {
+        $type = normalizeTargetType((string) ($_GET['type'] ?? 'folder'));
         $id = (int) ($_GET['id'] ?? 0);
-        if ($id <= 0) dossiersJson(['success' => false, 'message' => 'Dossier invalide.'], 400);
+        if ($id <= 0) dossiersJson(['success' => false, 'message' => 'Élément invalide.'], 400);
 
-        $folder = fetchFolder($pdo, $id, $serviceCode);
-        if (!$folder) dossiersJson(['success' => false, 'message' => 'Dossier introuvable.'], 404);
+        if ($type === 'folder') {
+            $item = fetchFolder($pdo, $id, $serviceCode);
+            if (!$item) dossiersJson(['success' => false, 'message' => 'Dossier introuvable.'], 404);
+            recordRecentView($pdo, $userId, 'folder', $id);
+            dossiersJson([
+                'success' => true,
+                'type' => 'folder',
+                'item' => $item,
+                'tags' => fetchTags($pdo, 'folder', $id),
+                'logs' => fetchLogs($pdo, $serviceCode, 'folder', $id),
+                'permissions' => fetchPermissions($pdo, 'folder', $id),
+                'breadcrumb' => buildBreadcrumb($pdo, $id, $serviceCode),
+            ]);
+        }
 
+        $item = fetchFileRow($pdo, $id, $serviceCode);
+        if (!$item) dossiersJson(['success' => false, 'message' => 'Fichier introuvable.'], 404);
+        recordRecentView($pdo, $userId, 'file', $id);
+        addDossierLog($pdo, $serviceId, $serviceCode, 'file', $id, 'file_viewed', ['name' => $item['original_name']], $userId);
         dossiersJson([
             'success' => true,
-            'folder' => $folder,
-            'breadcrumb' => buildBreadcrumb($pdo, $id, $serviceCode),
+            'type' => 'file',
+            'item' => $item,
+            'tags' => fetchTags($pdo, 'file', $id),
+            'logs' => fetchLogs($pdo, $serviceCode, 'file', $id),
+            'permissions' => fetchPermissions($pdo, 'file', $id),
+            'breadcrumb' => buildBreadcrumb($pdo, $item['folder_id'] ? (int) $item['folder_id'] : null, $serviceCode),
         ]);
     }
 
@@ -206,19 +370,12 @@ try {
         $confidentiality = normalizeConfidentiality(dossierText($data, 'confidentiality_level', 40));
         $parentId = isset($data['parent_id']) && (int) $data['parent_id'] > 0 ? (int) $data['parent_id'] : null;
 
-        if (!$name) {
-            dossiersJson(['success' => false, 'message' => 'Nom du dossier obligatoire.'], 400);
-        }
-
-        if ($parentId !== null && !fetchFolder($pdo, $parentId, $serviceCode)) {
-            dossiersJson(['success' => false, 'message' => 'Dossier parent introuvable.'], 404);
-        }
+        if (!$name) dossiersJson(['success' => false, 'message' => 'Nom du dossier obligatoire.'], 400);
+        if ($parentId !== null && !fetchFolder($pdo, $parentId, $serviceCode)) dossiersJson(['success' => false, 'message' => 'Dossier parent introuvable.'], 404);
 
         $statement = $pdo->prepare(
-            'INSERT INTO dossier_folders
-             (service_id, service_code, parent_id, owner_user_id, name, description, category, confidentiality_level, status)
-             VALUES
-             (:service_id, :service_code, :parent_id, :owner_user_id, :name, :description, :category, :confidentiality_level, :status)'
+            'INSERT INTO dossier_folders (service_id, service_code, parent_id, owner_user_id, name, description, category, confidentiality_level, status)
+             VALUES (:service_id, :service_code, :parent_id, :owner_user_id, :name, :description, :category, :confidentiality_level, :status)'
         );
         $statement->execute([
             'service_id' => $serviceId,
@@ -231,25 +388,169 @@ try {
             'confidentiality_level' => $confidentiality,
             'status' => 'active',
         ]);
-
         $id = (int) $pdo->lastInsertId();
-        addDossierLog($pdo, $serviceId, $serviceCode, 'folder', $id, 'folder_created', [
-            'name' => $name,
-            'parent_id' => $parentId,
-            'confidentiality_level' => $confidentiality,
-        ], $userId);
+        addDossierLog($pdo, $serviceId, $serviceCode, 'folder', $id, 'folder_created', ['name' => $name, 'parent_id' => $parentId, 'confidentiality_level' => $confidentiality], $userId);
+        dossiersJson(['success' => true, 'folder' => fetchFolder($pdo, $id, $serviceCode)], 201);
+    }
 
-        dossiersJson([
-            'success' => true,
-            'folder' => fetchFolder($pdo, $id, $serviceCode),
-        ], 201);
+    if ($method === 'POST' && $action === 'update') {
+        $data = dossiersBody();
+        $type = normalizeTargetType(dossierText($data, 'type', 20));
+        $id = (int) ($data['id'] ?? 0);
+        if ($id <= 0) dossiersJson(['success' => false, 'message' => 'Élément invalide.'], 400);
+
+        $name = dossierText($data, 'name', 180);
+        $description = dossierText($data, 'description', 3000);
+        $confidentiality = normalizeConfidentiality(dossierText($data, 'confidentiality_level', 40));
+        $tags = is_array($data['tags'] ?? null) ? $data['tags'] : [];
+
+        if ($type === 'folder') {
+            if (!fetchFolder($pdo, $id, $serviceCode)) dossiersJson(['success' => false, 'message' => 'Dossier introuvable.'], 404);
+            if (!$name) dossiersJson(['success' => false, 'message' => 'Nom obligatoire.'], 400);
+            $statement = $pdo->prepare('UPDATE dossier_folders SET name = :name, description = :description, confidentiality_level = :confidentiality WHERE id = :id AND service_code = :service_code');
+            $statement->execute(['name' => $name, 'description' => $description, 'confidentiality' => $confidentiality, 'id' => $id, 'service_code' => $serviceCode]);
+            replaceTags($pdo, $serviceCode, $userId, 'folder', $id, $tags);
+            addDossierLog($pdo, $serviceId, $serviceCode, 'folder', $id, 'folder_updated', ['name' => $name], $userId);
+            dossiersJson(['success' => true, 'item' => fetchFolder($pdo, $id, $serviceCode)]);
+        }
+
+        $file = fetchFileRow($pdo, $id, $serviceCode);
+        if (!$file) dossiersJson(['success' => false, 'message' => 'Fichier introuvable.'], 404);
+        if (!$name) $name = (string) $file['original_name'];
+        $statement = $pdo->prepare('UPDATE dossier_files SET original_name = :name, description = :description, confidentiality_level = :confidentiality WHERE id = :id AND service_code = :service_code');
+        $statement->execute(['name' => $name, 'description' => $description, 'confidentiality' => $confidentiality, 'id' => $id, 'service_code' => $serviceCode]);
+        replaceTags($pdo, $serviceCode, $userId, 'file', $id, $tags);
+        addDossierLog($pdo, $serviceId, $serviceCode, 'file', $id, 'file_updated', ['name' => $name], $userId);
+        dossiersJson(['success' => true, 'item' => fetchFileRow($pdo, $id, $serviceCode)]);
+    }
+
+    if ($method === 'POST' && $action === 'upload-file') {
+        $folderId = isset($_POST['folder_id']) && (int) $_POST['folder_id'] > 0 ? (int) $_POST['folder_id'] : null;
+        $confidentiality = normalizeConfidentiality((string) ($_POST['confidentiality_level'] ?? 'service'));
+        $description = mb_substr(trim((string) ($_POST['description'] ?? '')), 0, 3000) ?: null;
+
+        if ($folderId !== null && !fetchFolder($pdo, $folderId, $serviceCode)) dossiersJson(['success' => false, 'message' => 'Dossier parent introuvable.'], 404);
+        if (empty($_FILES['files'])) dossiersJson(['success' => false, 'message' => 'Aucun fichier envoyé.'], 400);
+
+        $files = $_FILES['files'];
+        $names = is_array($files['name']) ? $files['name'] : [$files['name']];
+        $tmpNames = is_array($files['tmp_name']) ? $files['tmp_name'] : [$files['tmp_name']];
+        $errors = is_array($files['error']) ? $files['error'] : [$files['error']];
+        $sizes = is_array($files['size']) ? $files['size'] : [$files['size']];
+
+        $allowed = ['png','jpg','jpeg','webp','pdf','txt','doc','docx','mp4','webm','mp3','wav','ogg','zip'];
+        $maxSize = 50 * 1024 * 1024;
+        $uploadRoot = dirname(__DIR__) . '/uploads/dossiers/' . preg_replace('/[^a-zA-Z0-9_-]/', '_', strtolower($serviceCode));
+        if (!is_dir($uploadRoot) && !mkdir($uploadRoot, 0755, true)) dossiersJson(['success' => false, 'message' => 'Dossier upload inaccessible.'], 500);
+
+        $created = [];
+        foreach ($names as $index => $originalName) {
+            $error = (int) ($errors[$index] ?? UPLOAD_ERR_NO_FILE);
+            if ($error !== UPLOAD_ERR_OK) dossiersJson(['success' => false, 'message' => uploadErrorMessage($error)], 400);
+            $size = (int) ($sizes[$index] ?? 0);
+            if ($size <= 0 || $size > $maxSize) dossiersJson(['success' => false, 'message' => 'Fichier invalide ou trop lourd. Maximum 50 Mo.'], 400);
+            $extension = strtolower(pathinfo((string) $originalName, PATHINFO_EXTENSION));
+            if (!in_array($extension, $allowed, true)) dossiersJson(['success' => false, 'message' => 'Type de fichier non autorisé.'], 400);
+            $tmpName = (string) ($tmpNames[$index] ?? '');
+            $storedName = date('Ymd_His') . '_' . bin2hex(random_bytes(8)) . '.' . $extension;
+            $targetPath = $uploadRoot . '/' . $storedName;
+            if (!move_uploaded_file($tmpName, $targetPath)) dossiersJson(['success' => false, 'message' => 'Impossible d’enregistrer le fichier.'], 500);
+            $publicPath = '/uploads/dossiers/' . preg_replace('/[^a-zA-Z0-9_-]/', '_', strtolower($serviceCode)) . '/' . $storedName;
+            $mimeType = mime_content_type($targetPath) ?: 'application/octet-stream';
+
+            $statement = $pdo->prepare(
+                'INSERT INTO dossier_files (folder_id, service_id, service_code, owner_user_id, original_name, stored_name, mime_type, extension, size_bytes, file_path, description, confidentiality_level)
+                 VALUES (:folder_id, :service_id, :service_code, :owner_user_id, :original_name, :stored_name, :mime_type, :extension, :size_bytes, :file_path, :description, :confidentiality_level)'
+            );
+            $statement->execute([
+                'folder_id' => $folderId,
+                'service_id' => $serviceId,
+                'service_code' => $serviceCode,
+                'owner_user_id' => $userId ?: null,
+                'original_name' => mb_substr((string) $originalName, 0, 180),
+                'stored_name' => $storedName,
+                'mime_type' => $mimeType,
+                'extension' => $extension,
+                'size_bytes' => $size,
+                'file_path' => $publicPath,
+                'description' => $description,
+                'confidentiality_level' => $confidentiality,
+            ]);
+            $fileId = (int) $pdo->lastInsertId();
+            addDossierLog($pdo, $serviceId, $serviceCode, 'file', $fileId, 'file_uploaded', ['name' => $originalName, 'folder_id' => $folderId, 'size_bytes' => $size], $userId);
+            $created[] = fetchFileRow($pdo, $fileId, $serviceCode);
+        }
+
+        dossiersJson(['success' => true, 'files' => $created], 201);
+    }
+
+    if ($method === 'POST' && in_array($action, ['delete','restore','archive','favorite','permission'], true)) {
+        $data = dossiersBody();
+        $type = normalizeTargetType(dossierText($data, 'type', 20));
+        $id = (int) ($data['id'] ?? 0);
+        if ($id <= 0) dossiersJson(['success' => false, 'message' => 'Élément invalide.'], 400);
+
+        if ($action === 'favorite') {
+            $enabled = !empty($data['enabled']);
+            if ($enabled) {
+                $statement = $pdo->prepare('INSERT IGNORE INTO dossier_favorites (user_id, target_type, target_id) VALUES (:user_id, :target_type, :target_id)');
+                $statement->execute(['user_id' => $userId, 'target_type' => $type, 'target_id' => $id]);
+            } else {
+                $statement = $pdo->prepare('DELETE FROM dossier_favorites WHERE user_id = :user_id AND target_type = :target_type AND target_id = :target_id');
+                $statement->execute(['user_id' => $userId, 'target_type' => $type, 'target_id' => $id]);
+            }
+            dossiersJson(['success' => true]);
+        }
+
+        if ($action === 'permission') {
+            $subjectType = in_array(($data['subject_type'] ?? ''), ['user','service','rank'], true) ? $data['subject_type'] : 'service';
+            $subjectValue = mb_substr(trim((string) ($data['subject_value'] ?? $serviceCode)), 0, 80);
+            $permission = in_array(($data['permission'] ?? ''), ['view','upload','edit','delete','restore','download','share','manage_access','archive','owner'], true) ? $data['permission'] : 'view';
+            $statement = $pdo->prepare(
+                'INSERT IGNORE INTO dossier_permissions (target_type, target_id, subject_type, subject_value, permission, created_by)
+                 VALUES (:target_type, :target_id, :subject_type, :subject_value, :permission, :created_by)'
+            );
+            $statement->execute(['target_type' => $type, 'target_id' => $id, 'subject_type' => $subjectType, 'subject_value' => $subjectValue, 'permission' => $permission, 'created_by' => $userId ?: null]);
+            addDossierLog($pdo, $serviceId, $serviceCode, $type, $id, 'access_updated', ['subject_type' => $subjectType, 'subject_value' => $subjectValue, 'permission' => $permission], $userId);
+            dossiersJson(['success' => true, 'permissions' => fetchPermissions($pdo, $type, $id)]);
+        }
+
+        $table = $type === 'folder' ? 'dossier_folders' : 'dossier_files';
+        $target = $type === 'folder' ? fetchFolder($pdo, $id, $serviceCode) : fetchFileRow($pdo, $id, $serviceCode, true);
+        if (!$target) dossiersJson(['success' => false, 'message' => 'Élément introuvable.'], 404);
+
+        if ($action === 'delete') {
+            $pdo->prepare("UPDATE {$table} SET deleted_at = NOW() WHERE id = :id AND service_code = :service_code")->execute(['id' => $id, 'service_code' => $serviceCode]);
+            addDossierLog($pdo, $serviceId, $serviceCode, $type, $id, $type . '_deleted', [], $userId);
+            dossiersJson(['success' => true]);
+        }
+        if ($action === 'restore') {
+            $pdo->prepare("UPDATE {$table} SET deleted_at = NULL WHERE id = :id AND service_code = :service_code")->execute(['id' => $id, 'service_code' => $serviceCode]);
+            addDossierLog($pdo, $serviceId, $serviceCode, $type, $id, $type . '_restored', [], $userId);
+            dossiersJson(['success' => true]);
+        }
+        if ($action === 'archive') {
+            $pdo->prepare("UPDATE {$table} SET status = 'archived' WHERE id = :id AND service_code = :service_code")->execute(['id' => $id, 'service_code' => $serviceCode]);
+            addDossierLog($pdo, $serviceId, $serviceCode, $type, $id, $type . '_archived', [], $userId);
+            dossiersJson(['success' => true]);
+        }
+    }
+
+    if ($method === 'GET' && $action === 'download') {
+        $id = (int) ($_GET['id'] ?? 0);
+        $file = fetchFileRow($pdo, $id, $serviceCode);
+        if (!$file) dossiersJson(['success' => false, 'message' => 'Fichier introuvable.'], 404);
+        $absolutePath = dirname(__DIR__) . $file['file_path'];
+        if (!is_file($absolutePath)) dossiersJson(['success' => false, 'message' => 'Fichier absent du serveur.'], 404);
+        addDossierLog($pdo, $serviceId, $serviceCode, 'file', $id, 'file_downloaded', ['name' => $file['original_name']], $userId);
+        header('Content-Type: ' . ($file['mime_type'] ?: 'application/octet-stream'));
+        header('Content-Disposition: attachment; filename="' . basename((string) $file['original_name']) . '"');
+        header('Content-Length: ' . filesize($absolutePath));
+        readfile($absolutePath);
+        exit;
     }
 
     dossiersJson(['success' => false, 'message' => 'Action dossiers inconnue.'], 404);
 } catch (Throwable $exception) {
-    dossiersJson([
-        'success' => false,
-        'message' => 'Erreur module Dossiers.',
-        'debug' => defined('DEBUG_MODE') && DEBUG_MODE ? $exception->getMessage() : null,
-    ], 500);
+    dossiersJson(['success' => false, 'message' => 'Erreur module Dossiers.', 'debug' => defined('DEBUG_MODE') && DEBUG_MODE ? $exception->getMessage() : null], 500);
 }

@@ -23,7 +23,7 @@ $username = (string) ($user['username'] ?? 'Agent');
   <link rel="stylesheet" href="/style.css?v=11" />
   <link rel="stylesheet" href="/mdt.css?v=7" />
   <link rel="stylesheet" href="/dossiers.css?v=1" />
-  <link rel="stylesheet" href="/dossiers-fixes.css?v=2" />
+  <link rel="stylesheet" href="/dossiers-fixes.css?v=3" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">
   <div class="mdt-shell">
@@ -90,5 +90,6 @@ $username = (string) ($user['username'] ?? 'Agent');
   </div>
   <script src="/mdt-sidebar.js?v=2"></script>
   <script src="/dossiers.js?v=2"></script>
+  <script src="/dossiers-window.js?v=1"></script>
 </body>
 </html>

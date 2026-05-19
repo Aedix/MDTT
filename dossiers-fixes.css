@@ -439,6 +439,22 @@ body {
   border-top: none;
 }
 
+.is-draggable-handle {
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.is-draggable-handle:active,
+.is-dragging-window .is-draggable-handle {
+  cursor: grabbing;
+}
+
+.is-dragging-window {
+  opacity: 0.96;
+  box-shadow: 0 34px 110px rgba(0, 0, 0, 0.62) !important;
+}
+
 .dossiers-dropzone {
   min-height: 130px;
   display: grid;

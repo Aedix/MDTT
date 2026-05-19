@@ -23,6 +23,7 @@ $username = (string) ($user['username'] ?? 'Agent');
   <link rel="stylesheet" href="/style.css?v=11" />
   <link rel="stylesheet" href="/mdt.css?v=7" />
   <link rel="stylesheet" href="/dossiers.css?v=1" />
+  <link rel="stylesheet" href="/dossiers-fixes.css?v=1" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">
   <div class="mdt-shell">
@@ -53,7 +54,6 @@ $username = (string) ($user['username'] ?? 'Agent');
             <p>Gérez, organisez et partagez les documents du service.</p>
           </div>
           <label class="dossiers-search" for="dossiersSearchInput"><span aria-hidden="true">⌕</span><input id="dossiersSearchInput" type="search" placeholder="Rechercher un dossier, fichier, tag..." autocomplete="off" /><kbd>Ctrl K</kbd></label>
-          <div class="dossiers-profile-actions" aria-label="Actions rapides utilisateur"><button type="button" class="dossiers-icon-button" title="Outils">⚙</button><button type="button" class="dossiers-icon-button has-alert" title="Notifications">●</button><div class="dossiers-user-card"><span class="dossiers-avatar">A</span><div><strong><?= htmlspecialchars($username, ENT_QUOTES, 'UTF-8') ?></strong><span><?= htmlspecialchars($activeRankName, ENT_QUOTES, 'UTF-8') ?></span></div></div></div>
         </section>
 
         <section class="dossiers-quick-row" aria-label="Raccourcis dossiers">

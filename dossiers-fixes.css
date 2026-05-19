@@ -108,6 +108,15 @@ body {
   overflow: hidden;
 }
 
+.dossier-item.is-deleted {
+  opacity: 0.78;
+  border-color: rgba(255, 107, 107, 0.35);
+}
+
+.dossier-item.is-archived {
+  border-color: rgba(245, 197, 66, 0.32);
+}
+
 .dossier-item strong,
 .dossier-item small {
   max-width: 100%;
@@ -139,6 +148,11 @@ body {
   border-radius: 16px;
   color: var(--mdt-muted);
   background: rgba(255, 255, 255, 0.025);
+}
+
+.dossiers-empty-state.compact {
+  min-height: 92px;
+  padding: 18px;
 }
 
 .dossiers-empty-state strong {
@@ -200,12 +214,337 @@ body {
   height: 38px;
 }
 
+.detail-footer-actions button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .dossier-feedback[data-type="success"] {
   color: var(--mdt-success);
 }
 
 .dossier-feedback[data-type="error"] {
   color: var(--mdt-danger);
+}
+
+.dossiers-new-menu {
+  position: fixed;
+  z-index: 80;
+  width: 310px;
+  padding: 12px;
+  border: 1px solid rgba(139, 160, 190, 0.24);
+  border-radius: 18px;
+  background: rgba(8, 14, 25, 0.96);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(16px);
+}
+
+.dossiers-new-menu button {
+  width: 100%;
+  display: grid;
+  gap: 3px;
+  padding: 12px;
+  border: 1px solid transparent;
+  border-radius: 13px;
+  color: var(--mdt-text);
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+}
+
+.dossiers-new-menu button:hover:not(:disabled) {
+  border-color: rgba(124, 58, 237, 0.42);
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.dossiers-new-menu button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.dossiers-new-menu span {
+  color: var(--mdt-muted);
+  font-size: 0.78rem;
+}
+
+.dossiers-drawer {
+  position: fixed;
+  top: 104px;
+  right: 28px;
+  z-index: 70;
+  width: min(420px, calc(100vw - 40px));
+  max-height: calc(100vh - 132px);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  border: 1px solid rgba(139, 160, 190, 0.24);
+  border-radius: 22px;
+  background: rgba(8, 14, 25, 0.98);
+  box-shadow: 0 26px 80px rgba(0, 0, 0, 0.46);
+  overflow: hidden;
+  backdrop-filter: blur(16px);
+}
+
+.dossiers-drawer-header,
+.dossiers-modal-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid rgba(139, 160, 190, 0.16);
+}
+
+.dossiers-drawer-header h3,
+.dossiers-modal-header h3,
+.dossiers-confirm h3 {
+  margin: 0;
+  color: var(--mdt-text);
+  font-size: 1.1rem;
+}
+
+.dossiers-drawer-header p,
+.dossiers-modal-header p,
+.dossiers-confirm p {
+  margin: 5px 0 0;
+  color: var(--mdt-muted);
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.dossiers-drawer-header button,
+.dossiers-modal-header button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(139, 160, 190, 0.2);
+  border-radius: 10px;
+  color: var(--mdt-muted);
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+}
+
+.dossiers-drawer-body,
+.dossiers-modal-body {
+  padding: 18px 20px;
+  overflow: auto;
+}
+
+.dossiers-drawer-footer,
+.dossiers-modal-footer,
+.dossiers-confirm footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid rgba(139, 160, 190, 0.16);
+}
+
+.dossiers-form {
+  display: grid;
+  gap: 14px;
+}
+
+.dossiers-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--mdt-muted);
+  font-size: 0.78rem;
+}
+
+.dossiers-form input,
+.dossiers-form textarea,
+.dossiers-form select {
+  width: 100%;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid rgba(139, 160, 190, 0.22);
+  border-radius: 12px;
+  color: var(--mdt-text);
+  background: rgba(3, 7, 18, 0.62);
+  outline: none;
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.dossiers-form textarea {
+  resize: vertical;
+}
+
+.dossiers-form input:focus,
+.dossiers-form textarea:focus,
+.dossiers-form select:focus {
+  border-color: rgba(124, 58, 237, 0.62);
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.12);
+}
+
+.dossiers-drawer-footer button,
+.dossiers-modal-footer button,
+.dossiers-confirm button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 1px solid rgba(139, 160, 190, 0.22);
+  border-radius: 12px;
+  color: var(--mdt-text);
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.dossiers-drawer-footer .primary,
+.dossiers-modal-footer .primary {
+  border: none;
+  color: #fff;
+  background: linear-gradient(135deg, #2f80ed, #7c3aed);
+}
+
+.dossiers-confirm .danger,
+.detail-footer-actions .danger {
+  color: #ffb3b3;
+  border-color: rgba(255, 107, 107, 0.25);
+  background: rgba(255, 107, 107, 0.12);
+}
+
+.dossiers-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: rgba(1, 5, 12, 0.68);
+  backdrop-filter: blur(8px);
+}
+
+.dossiers-modal {
+  width: min(620px, calc(100vw - 32px));
+  max-height: calc(100vh - 64px);
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  border: 1px solid rgba(139, 160, 190, 0.25);
+  border-radius: 24px;
+  background: rgba(8, 14, 25, 0.98);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+.dossiers-confirm {
+  width: min(430px, calc(100vw - 32px));
+  padding: 20px;
+  border: 1px solid rgba(139, 160, 190, 0.25);
+  border-radius: 20px;
+  background: rgba(8, 14, 25, 0.98);
+  box-shadow: 0 28px 90px rgba(0, 0, 0, 0.5);
+}
+
+.dossiers-confirm footer {
+  padding: 16px 0 0;
+  border-top: none;
+}
+
+.dossiers-dropzone {
+  min-height: 130px;
+  display: grid;
+  place-items: center;
+  gap: 6px;
+  padding: 20px;
+  border: 1px dashed rgba(139, 160, 190, 0.38);
+  border-radius: 16px;
+  color: var(--mdt-text);
+  text-align: center;
+  background: rgba(255, 255, 255, 0.025);
+  cursor: pointer;
+}
+
+.dossiers-dropzone span {
+  color: var(--mdt-muted);
+  font-size: 0.82rem;
+}
+
+.dossiers-dropzone.is-dragging {
+  border-color: rgba(124, 58, 237, 0.8);
+  background: rgba(124, 58, 237, 0.12);
+}
+
+.dossiers-upload-list,
+.dossiers-permissions-list {
+  display: grid;
+  gap: 8px;
+}
+
+.dossiers-upload-list > div,
+.dossiers-permission-row,
+.dossiers-readonly-box {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid rgba(139, 160, 190, 0.16);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.dossiers-upload-list span,
+.dossiers-permission-row span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--mdt-text);
+}
+
+.dossiers-upload-list small,
+.dossiers-permission-row strong {
+  color: #bdafff;
+  font-size: 0.78rem;
+}
+
+.dossiers-upload-list button,
+.dossiers-permission-row button {
+  width: 30px;
+  height: 30px;
+  border: 1px solid rgba(255, 107, 107, 0.24);
+  border-radius: 9px;
+  color: #ffb3b3;
+  background: rgba(255, 107, 107, 0.1);
+  cursor: pointer;
+}
+
+.dossiers-readonly-box {
+  grid-template-columns: 1fr;
+  color: var(--mdt-muted);
+  font-size: 0.82rem;
+}
+
+.dossiers-empty-inline {
+  padding: 14px;
+  border: 1px dashed rgba(139, 160, 190, 0.22);
+  border-radius: 12px;
+  color: var(--mdt-muted);
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.dossiers-toast {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 110;
+  max-width: min(430px, calc(100vw - 48px));
+  padding: 14px 16px;
+  border: 1px solid rgba(139, 160, 190, 0.24);
+  border-radius: 14px;
+  color: var(--mdt-text);
+  background: rgba(8, 14, 25, 0.96);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.38);
+}
+
+.dossiers-toast[data-type="success"] {
+  border-color: rgba(73, 209, 125, 0.32);
+  color: #d8ffe8;
+  background: rgba(6, 38, 24, 0.96);
+}
+
+.dossiers-toast[data-type="error"] {
+  border-color: rgba(255, 107, 107, 0.34);
+  color: #ffd6d6;
+  background: rgba(45, 12, 18, 0.96);
 }
 
 @media (max-width: 1320px) {
@@ -225,6 +564,10 @@ body {
   .dossiers-detail-panel {
     min-height: auto;
   }
+
+  .dossiers-drawer {
+    top: 80px;
+  }
 }
 
 @media (max-width: 860px) {
@@ -238,5 +581,11 @@ body {
 
   .dossiers-grid {
     grid-template-columns: 1fr;
+  }
+
+  .dossiers-drawer {
+    right: 16px;
+    left: 16px;
+    width: auto;
   }
 }

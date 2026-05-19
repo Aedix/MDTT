@@ -24,7 +24,7 @@ $username = (string) ($user['username'] ?? 'Agent');
   <link rel="stylesheet" href="/mdt.css?v=7" />
   <link rel="stylesheet" href="/dossiers.css?v=1" />
   <link rel="stylesheet" href="/dossiers-fixes.css?v=4" />
-  <link rel="stylesheet" href="/dossiers-cleanup.css?v=1" />
+  <link rel="stylesheet" href="/dossiers-cleanup.css?v=2" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">
   <div class="mdt-shell">
@@ -74,13 +74,13 @@ $username = (string) ($user['username'] ?? 'Agent');
           </article>
 
           <aside class="dossiers-detail-panel" aria-label="Détail de l’élément sélectionné">
-            <header class="detail-header"><div class="detail-title-row"><span id="detailIcon" class="folder-icon"></span><div><h2 id="detailTitle">Aucun élément sélectionné</h2><p><span id="detailSubtype">Sélection</span> <span id="detailBadge" class="detail-badge">—</span></p></div></div><div class="detail-actions-mini"><button type="button" id="favoriteButton" title="Favori">☆</button></div></header>
+            <header class="detail-header"><div class="detail-title-row"><span id="detailIcon" class="folder-icon"></span><div><h2 id="detailTitle">Aucun élément sélectionné</h2><p><span id="detailSubtype">Sélection</span> <span id="detailBadge" class="detail-badge">—</span></p></div></div><div class="detail-actions-mini"><button type="button" id="favoriteButton" title="Favori" aria-pressed="false">☆</button></div></header>
             <nav class="detail-tabs" aria-label="Onglets du détail"><button type="button" class="is-active" data-tab="details">Détails</button><button type="button" data-tab="activity">Activité</button><button type="button" data-tab="access">Accès</button></nav>
             <section class="detail-tab-panel is-active" data-panel="details"><div class="detail-field wide"><span>Description</span><p id="detailDescription">Sélectionne un dossier ou fichier pour afficher ses informations.</p></div><div class="detail-meta-grid"><div class="detail-field"><span>Propriétaire</span><strong id="detailOwner">—</strong></div><div class="detail-field"><span>Service</span><strong id="detailService">FIB</strong></div><div class="detail-field"><span>Créé le</span><strong id="detailCreated">—</strong></div><div class="detail-field"><span>Dernière modification</span><strong id="detailUpdated">—</strong></div></div><div class="detail-field wide"><span>Tags</span><div id="detailTags" class="detail-tags"></div></div><div class="detail-field wide"><span>Lié à</span><strong id="detailLinked">—</strong></div></section>
             <section class="detail-tab-panel" data-panel="activity"><div id="detailActivity" class="detail-activity"></div></section>
             <section class="detail-tab-panel" data-panel="access"><div id="detailAccess" class="detail-access"></div></section>
             <button type="button" id="manageAccessButton" class="dossiers-access-button">Gérer les accès</button>
-            <footer class="detail-footer-actions"><button type="button" title="Partager">↗</button><button type="button" title="Renommer">✎</button><button type="button" title="Télécharger">⇩</button><button type="button" class="danger" title="Supprimer">⌫</button></footer>
+            <footer class="detail-footer-actions"><button type="button" title="Partager">↗</button><button type="button" title="Renommer">✎</button><button type="button" title="Télécharger">⇩</button><button type="button" title="Archiver">▣</button><button type="button" class="danger" title="Supprimer">⌫</button></footer>
             <p id="dossierFeedback" class="dossier-feedback" aria-live="polite"></p>
           </aside>
         </section>
@@ -91,6 +91,6 @@ $username = (string) ($user['username'] ?? 'Agent');
   <script src="/dossiers.js?v=2"></script>
   <script src="/dossiers-window.js?v=1"></script>
   <script src="/dossiers-advanced.js?v=2"></script>
-  <script src="/dossiers-cleanup.js?v=1"></script>
+  <script src="/dossiers-cleanup.js?v=2"></script>
 </body>
 </html>

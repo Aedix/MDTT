@@ -168,22 +168,9 @@
     }
   }
 
-  function mergeClassificationIntoForeignBanner() {
-    const foreignBanner = document.querySelector('#reportExperienceLockBanner.foreign, .report-lock-banner.foreign');
-    if (!foreignBanner) return false;
-
-    document.querySelector('#reportClassificationBanner')?.remove();
-
-    const content = foreignBanner.querySelector('div:last-child') || foreignBanner;
-    let pill = foreignBanner.querySelector('.foreign-classification-pill');
-    if (!pill) {
-      pill = document.createElement('span');
-      pill.className = 'foreign-classification-pill';
-      pill.setAttribute('style', 'display:inline-flex;width:max-content;margin-top:8px;padding:4px 9px;border:1px solid rgba(20,184,166,.45);border-radius:7px;background:rgba(20,184,166,.12);color:#99f6e4;font-size:.76rem;font-weight:900;');
-      content.appendChild(pill);
-    }
-    pill.textContent = `Classification : ${labelClassification(currentClassification)}`;
-    return true;
+  function removeForeignDuplicateNotice() {
+    document.querySelector('#reportExperienceLockBanner.foreign')?.remove();
+    document.querySelectorAll('.report-lock-banner.foreign').forEach((banner) => banner.remove());
   }
 
   function ensureClassificationBanner() {
@@ -196,8 +183,7 @@
     });
 
     document.querySelector('#reportLockNotice')?.remove();
-
-    if (mergeClassificationIntoForeignBanner()) return;
+    removeForeignDuplicateNotice();
 
     let banner = document.querySelector('#reportClassificationBanner');
     if (!banner) {

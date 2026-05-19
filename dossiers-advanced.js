@@ -16,7 +16,7 @@
           fileCache.clear();
           (payload.folders || []).forEach((folder) => folderCache.set(String(folder.id), folder));
           (payload.files || []).forEach((file) => fileCache.set(String(file.id), file));
-          setTimeout(enhanceCards, 20);
+          setTimeout(enhanceUi, 20);
         }).catch(() => {});
       }
     } catch (error) {}
@@ -27,12 +27,18 @@
     return String(value || '').replace(/[&<>\"]/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '\"': '&quot;' }[char]));
   }
 
-  function logoText(folder) {
-    const key = String(folder.logo_key || 'service').toLowerCase();
-    const label = String(folder.logo_label || '').trim();
-    if (label) return label.slice(0, 4).toUpperCase();
-    const service = String(folder.service_code || 'SRV').slice(0, 4).toUpperCase();
-    return key === 'crime' ? 'CRM' : key === 'fib' || key === 'service' ? service : key.slice(0, 4).toUpperCase();
+  function currentFileFromCard(card) {
+    const id = String(card?.dataset?.id || '');
+    if (fileCache.has(id)) return fileCache.get(id);
+    const badge = card?.querySelector('.file-badge')?.textContent || '';
+    const name = card?.querySelector('strong')?.textContent?.replace('★', '').trim() || 'Aperçu du fichier';
+    return { id, extension: badge.toLowerCase(), original_name: name };
+  }
+
+  function enhanceUi() {
+    enhanceCards();
+    syncFavoriteState();
+    patchUploadHelp();
   }
 
   function enhanceCards() {
@@ -44,19 +50,46 @@
       card.draggable = true;
       card.classList.add('is-sortable-card');
 
-      const menu = card.querySelector('.item-menu');
-      if (menu) {
-        if (kind === 'folder') {
-          const folder = folderCache.get(id) || {};
-          menu.className = 'folder-logo-badge';
-          menu.textContent = logoText(folder);
-          menu.title = folder.logo_label || folder.logo_key || 'Logo service';
-          menu.dataset.logo = folder.logo_key || 'service';
-        } else {
-          menu.remove();
+      card.querySelectorAll('.item-menu, .folder-logo-badge').forEach((node) => node.remove());
+
+      if (kind === 'folder') {
+        const folder = folderCache.get(String(id)) || {};
+        const logoUrl = folder.division_logo_url || folder.logo_url || folder.service_logo_url || '';
+        card.querySelector('.folder-real-logo')?.remove();
+        if (logoUrl) {
+          const logo = document.createElement('span');
+          logo.className = 'folder-real-logo';
+          logo.innerHTML = `<img src="${escapeHtml(logoUrl)}" alt="" loading="lazy" />`;
+          card.appendChild(logo);
         }
       }
+
+      const strong = card.querySelector('strong');
+      if (strong && strong.textContent.includes('★') && !strong.querySelector('.favorite-star')) {
+        const title = strong.textContent.replace('★', '').trim();
+        strong.innerHTML = `${escapeHtml(title)} <span class="favorite-star">★</span>`;
+        card.classList.add('is-favorite-card');
+      } else if (strong && !strong.textContent.includes('★')) {
+        card.classList.remove('is-favorite-card');
+      }
     });
+  }
+
+  function syncFavoriteState() {
+    const button = document.querySelector('#favoriteButton');
+    if (!button) return;
+    const isFavorite = button.textContent.includes('★');
+    button.classList.toggle('is-favorite', isFavorite);
+    button.setAttribute('aria-pressed', isFavorite ? 'true' : 'false');
+    button.title = isFavorite ? 'Retirer des favoris' : 'Ajouter aux favoris';
+  }
+
+  function patchUploadHelp() {
+    const uploadHelp = document.querySelector('#uploadDropzone span');
+    if (uploadHelp && !uploadHelp.dataset.updatedLimit) {
+      uploadHelp.textContent = 'ou cliquez pour parcourir · JPG, PNG, PDF, MP4, MP3, TXT · max 250 Mo applicatif';
+      uploadHelp.dataset.updatedLimit = '1';
+    }
   }
 
   async function persistOrder() {
@@ -65,12 +98,14 @@
       .map((card) => ({ type: card.dataset.kind, id: Number(card.dataset.id) }));
     if (!items.length) return;
     try {
-      await nativeFetch('/api/dossiers.php?action=reorder', {
+      const response = await nativeFetch('/api/dossiers.php?action=reorder', {
         method: 'POST',
         credentials: 'same-origin',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items }),
       });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok || payload.success === false) throw new Error(payload.message || 'Erreur reorder.');
       showMiniToast('Ordre enregistré.', 'success');
     } catch (error) {
       showMiniToast('Impossible d’enregistrer l’ordre.', 'error');
@@ -125,7 +160,7 @@
   document.addEventListener('dblclick', (event) => {
     const card = event.target.closest('.dossier-item.file');
     if (!card || !card.dataset.id) return;
-    const file = fileCache.get(String(card.dataset.id));
+    const file = currentFileFromCard(card);
     const ext = String(file?.extension || '').toLowerCase();
     if (!['png', 'jpg', 'jpeg', 'webp', 'pdf', 'mp4', 'webm'].includes(ext)) return;
     event.preventDefault();
@@ -163,53 +198,6 @@
     modal.addEventListener('click', (event) => { if (event.target === modal) modal.remove(); });
   }
 
-  function patchForms() {
-    document.querySelectorAll('#folderCreateForm, #editForm').forEach((form) => {
-      if (form.dataset.logoPatched === '1') return;
-      form.dataset.logoPatched = '1';
-      const isFolderForm = form.id === 'folderCreateForm' || document.querySelector('#dossiersDrawerTitle')?.textContent.toLowerCase().includes('dossier');
-      if (!isFolderForm) return;
-      const currentId = document.querySelector('.dossier-item.folder.is-selected')?.dataset.id;
-      const current = currentId ? folderCache.get(currentId) : null;
-      const logoBlock = document.createElement('div');
-      logoBlock.className = 'dossiers-logo-config';
-      logoBlock.innerHTML = `
-        <label>Logo affiché sur la carte
-          <select name="logo_key">
-            <option value="service" ${current?.logo_key === 'service' ? 'selected' : ''}>Service actif</option>
-            <option value="fib" ${current?.logo_key === 'fib' ? 'selected' : ''}>FIB</option>
-            <option value="crime" ${current?.logo_key === 'crime' ? 'selected' : ''}>Division Crime</option>
-            <option value="custom" ${current?.logo_key === 'custom' ? 'selected' : ''}>Personnalisé</option>
-          </select>
-        </label>
-        <label>Texte court du logo
-          <input name="logo_label" maxlength="4" placeholder="FIB / CRM / SP" value="${escapeHtml(current?.logo_label || '')}" />
-        </label>`;
-      form.appendChild(logoBlock);
-    });
-
-    const uploadHelp = document.querySelector('#uploadDropzone span');
-    if (uploadHelp && !uploadHelp.dataset.updatedLimit) {
-      uploadHelp.textContent = 'ou cliquez pour parcourir · JPG, PNG, PDF, MP4, MP3, TXT · max 250 Mo applicatif';
-      uploadHelp.dataset.updatedLimit = '1';
-    }
-  }
-
-  const nativeJsonStringify = JSON.stringify;
-  JSON.stringify = function patchedStringify(value, ...rest) {
-    try {
-      if (value && typeof value === 'object' && (value.name || value.type === 'folder')) {
-        const visibleForm = document.querySelector('#folderCreateForm, #editForm');
-        if (visibleForm) {
-          const fd = new FormData(visibleForm);
-          if (fd.has('logo_key')) value.logo_key = String(fd.get('logo_key') || 'service');
-          if (fd.has('logo_label')) value.logo_label = String(fd.get('logo_label') || '').trim();
-        }
-      }
-    } catch (error) {}
-    return nativeJsonStringify.call(JSON, value, ...rest);
-  };
-
   function showMiniToast(message, type) {
     const existing = document.querySelector('#dossiersToast');
     if (existing) {
@@ -220,14 +208,10 @@
     }
   }
 
-  const observer = new MutationObserver(() => {
-    enhanceCards();
-    patchForms();
-  });
-  observer.observe(document.documentElement, { childList: true, subtree: true });
+  const observer = new MutationObserver(enhanceUi);
+  observer.observe(document.documentElement, { childList: true, subtree: true, characterData: true });
 
-  document.addEventListener('DOMContentLoaded', () => {
-    enhanceCards();
-    patchForms();
-  });
+  document.addEventListener('DOMContentLoaded', enhanceUi);
+  document.addEventListener('click', () => setTimeout(enhanceUi, 80));
+  setTimeout(enhanceUi, 350);
 })();

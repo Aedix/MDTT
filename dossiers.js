@@ -1,6 +1,7 @@
 (() => {
+  const initialFolderId = new URLSearchParams(window.location.search).get('folder_id');
   const state = {
-    parentId: null,
+    parentId: initialFolderId && Number(initialFolderId) > 0 ? Number(initialFolderId) : null,
     selected: null,
     folders: [],
     files: [],
@@ -18,6 +19,13 @@
     if (!feedback) return;
     feedback.textContent = message || '';
     feedback.dataset.type = type;
+  }
+
+  function updateUrl() {
+    const url = new URL(window.location.href);
+    if (state.parentId) url.searchParams.set('folder_id', String(state.parentId));
+    else url.searchParams.delete('folder_id');
+    window.history.replaceState({ folder_id: state.parentId }, '', url.toString());
   }
 
   function formatDate(value) {
@@ -126,6 +134,7 @@
     card.dataset.id = String(detail.id);
     card.dataset.kind = 'folder';
     card.dataset.search = `${detail.title} ${detail.description} ${detail.tags.join(' ')}`;
+    card.title = 'Double-clique pour ouvrir ce dossier';
 
     const menu = document.createElement('span');
     menu.className = 'item-menu';
@@ -156,6 +165,7 @@
     root.type = 'button';
     root.className = 'dossiers-breadcrumb-button';
     root.textContent = state.serviceCode;
+    root.title = 'Retourner à la racine du service';
     root.addEventListener('click', () => openFolder(null));
     breadcrumbEl.appendChild(root);
 
@@ -171,28 +181,39 @@
     });
   }
 
+  function renderBackCard() {
+    if (state.parentId === null) return null;
+
+    const parent = state.breadcrumb.length >= 2 ? Number(state.breadcrumb[state.breadcrumb.length - 2].id) : null;
+    const back = document.createElement('button');
+    back.type = 'button';
+    back.className = 'dossier-item folder dossier-back-card';
+    back.dataset.kind = 'back';
+    back.title = 'Double-clique pour retourner au dossier parent';
+    back.innerHTML = '<span class="folder-icon"></span><strong>Retour</strong><small>Double-clique pour revenir</small>';
+    back.addEventListener('click', () => {
+      document.querySelectorAll('.dossier-item').forEach((card) => card.classList.remove('is-selected'));
+      back.classList.add('is-selected');
+      setFeedback('Double-clique sur “Retour” pour ouvrir le dossier parent.');
+    });
+    back.addEventListener('dblclick', () => openFolder(parent));
+    return back;
+  }
+
   function renderGrid() {
     if (!grid) return;
     grid.innerHTML = '';
     grid.dataset.view = state.view;
 
-    if (state.parentId !== null) {
-      const back = document.createElement('button');
-      back.type = 'button';
-      back.className = 'dossier-item folder dossier-back-card';
-      back.dataset.kind = 'back';
-      back.innerHTML = '<span class="folder-icon"></span><strong>Retour</strong><small>Dossier parent</small>';
-      const parent = state.breadcrumb.length >= 2 ? Number(state.breadcrumb[state.breadcrumb.length - 2].id) : null;
-      back.addEventListener('click', () => openFolder(parent));
-      grid.appendChild(back);
-    }
+    const backCard = renderBackCard();
+    if (backCard) grid.appendChild(backCard);
 
     state.folders.forEach((folder) => grid.appendChild(createFolderCard(folder)));
 
     if (state.folders.length === 0 && state.files.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'dossiers-empty-state';
-      empty.innerHTML = '<strong>Aucun dossier ici.</strong><span>Crée un premier dossier avec “+ Nouveau”.</span>';
+      empty.innerHTML = '<strong>Aucun dossier ici.</strong><span>Crée un premier sous-dossier avec “+ Nouveau”.</span>';
       grid.appendChild(empty);
       selectItem(null);
       return;
@@ -221,6 +242,7 @@
     state.breadcrumb = Array.isArray(payload.breadcrumb) ? payload.breadcrumb : [];
     renderBreadcrumb();
     renderGrid();
+    updateUrl();
     setFeedback('');
   }
 
@@ -238,7 +260,7 @@
 
     try {
       setFeedback('Création du dossier en cours...');
-      await requestJson('/api/dossiers.php?action=create-folder', {
+      const payload = await requestJson('/api/dossiers.php?action=create-folder', {
         method: 'POST',
         body: JSON.stringify({
           name: name.trim(),
@@ -247,8 +269,9 @@
           parent_id: state.parentId,
         }),
       });
-      setFeedback('Dossier créé avec succès.', 'success');
       await loadFolders();
+      if (payload.folder) selectItem(folderToDetail(payload.folder));
+      setFeedback('Dossier créé avec succès.', 'success');
     } catch (error) {
       setFeedback(error.message, 'error');
     }
@@ -292,6 +315,12 @@
   document.querySelector('#newDossierButton')?.addEventListener('click', createFolder);
   document.querySelector('#manageAccessButton')?.addEventListener('click', () => {
     setFeedback('Gestion des accès prévue dans une prochaine étape.');
+  });
+
+  window.addEventListener('popstate', () => {
+    const folderId = new URLSearchParams(window.location.search).get('folder_id');
+    state.parentId = folderId && Number(folderId) > 0 ? Number(folderId) : null;
+    loadFolders().catch((error) => setFeedback(error.message, 'error'));
   });
 
   loadFolders().catch((error) => {

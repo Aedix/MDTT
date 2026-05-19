@@ -23,7 +23,7 @@ $username = (string) ($user['username'] ?? 'Agent');
   <link rel="stylesheet" href="/style.css?v=11" />
   <link rel="stylesheet" href="/mdt.css?v=7" />
   <link rel="stylesheet" href="/dossiers.css?v=1" />
-  <link rel="stylesheet" href="/dossiers-fixes.css?v=1" />
+  <link rel="stylesheet" href="/dossiers-fixes.css?v=2" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">
   <div class="mdt-shell">
@@ -57,11 +57,12 @@ $username = (string) ($user['username'] ?? 'Agent');
         </section>
 
         <section class="dossiers-quick-row" aria-label="Raccourcis dossiers">
-          <button type="button" class="dossiers-quick-card is-active" data-filter="all"><span class="quick-icon">□</span><span><strong>Mes dossiers</strong><small>24 dossiers</small></span></button>
-          <button type="button" class="dossiers-quick-card" data-filter="shared"><span class="quick-icon">♙</span><span><strong>Partagés avec moi</strong><small>7 dossiers</small></span></button>
-          <button type="button" class="dossiers-quick-card" data-filter="recent"><span class="quick-icon">◷</span><span><strong>Récents</strong><small>12 fichiers</small></span></button>
-          <button type="button" class="dossiers-quick-card" data-filter="favorite"><span class="quick-icon accent">☆</span><span><strong>Favoris</strong><small>8 éléments</small></span></button>
-          <button type="button" class="dossiers-quick-card" data-filter="trash"><span class="quick-icon danger">♲</span><span><strong>Corbeille</strong><small>3 éléments</small></span></button>
+          <button type="button" class="dossiers-quick-card is-active" data-filter="all"><span class="quick-icon">□</span><span><strong>Mes dossiers</strong><small>Dossiers actifs</small></span></button>
+          <button type="button" class="dossiers-quick-card" data-filter="shared"><span class="quick-icon">♙</span><span><strong>Partagés avec moi</strong><small>Accès autorisés</small></span></button>
+          <button type="button" class="dossiers-quick-card" data-filter="recent"><span class="quick-icon">◷</span><span><strong>Récents</strong><small>Dernières vues</small></span></button>
+          <button type="button" class="dossiers-quick-card" data-filter="favorite"><span class="quick-icon accent">☆</span><span><strong>Favoris</strong><small>Éléments suivis</small></span></button>
+          <button type="button" class="dossiers-quick-card" data-filter="archive"><span class="quick-icon">▣</span><span><strong>Archives</strong><small>Éléments archivés</small></span></button>
+          <button type="button" class="dossiers-quick-card" data-filter="trash"><span class="quick-icon danger">♲</span><span><strong>Corbeille</strong><small>Suppressions</small></span></button>
           <button type="button" id="newDossierButton" class="dossiers-new-button">+ Nouveau <span>⌄</span></button>
         </section>
 
@@ -70,16 +71,6 @@ $username = (string) ($user['username'] ?? 'Agent');
             <header class="dossiers-browser-toolbar"><nav class="dossiers-breadcrumb" aria-label="Fil d’Ariane"><span><?= htmlspecialchars($activeServiceCode, ENT_QUOTES, 'UTF-8') ?></span><span>›</span><span>Enquêtes actives</span><span>›</span><strong>Dossier #FIB-2026-041</strong></nav><div class="dossiers-view-tools"><div class="dossiers-view-toggle"><button type="button" class="is-active" data-view="grid">▦</button><button type="button" data-view="list">☰</button></div><button type="button" class="dossiers-tool-button">Date de modification ⌄</button><button type="button" class="dossiers-tool-button">Filtres</button></div></header>
             <div id="dossiersGrid" class="dossiers-grid" data-view="grid">
               <button type="button" class="dossier-item folder is-selected" data-id="case-root" data-kind="folder" data-search="dossier enquête fib confidentiel"><span class="item-menu">⋮</span><span class="folder-icon"></span><strong>Dossier #FIB-2026-041</strong><small>Enquête active</small></button>
-              <button type="button" class="dossier-item folder" data-id="proofs" data-kind="folder" data-search="preuves images vidéos audios fichiers"><span class="item-menu">⋮</span><span class="folder-icon"></span><strong>Preuves</strong><small>18 fichiers</small></button>
-              <button type="button" class="dossier-item folder" data-id="reports" data-kind="folder" data-search="rapports pdf documents"><span class="item-menu">⋮</span><span class="folder-icon"></span><strong>Rapports</strong><small>7 fichiers</small></button>
-              <button type="button" class="dossier-item folder" data-id="photos" data-kind="folder" data-search="photos img scènes preuves"><span class="item-menu">⋮</span><span class="folder-icon"></span><strong>Photos</strong><small>32 fichiers</small></button>
-              <button type="button" class="dossier-item folder" data-id="videos" data-kind="folder" data-search="vidéos mp4 caméra bodycam"><span class="item-menu">⋮</span><span class="folder-icon"></span><strong>Vidéos</strong><small>12 fichiers</small></button>
-              <button type="button" class="dossier-item folder" data-id="audios" data-kind="folder" data-search="audios mp3 enregistrement radio"><span class="item-menu">⋮</span><span class="folder-icon"></span><strong>Audios</strong><small>5 fichiers</small></button>
-              <button type="button" class="dossier-item file" data-id="photo-scene" data-kind="file" data-search="photo_scene_01 jpg image preuve scène"><span class="item-menu">⋮</span><span class="file-preview image-preview"><span>IMG</span></span><strong>Photo_scene_01.jpg</strong><small>1.2 Mo · 18/05/2026</small><span class="file-badge">IMG</span></button>
-              <button type="button" class="dossier-item file" data-id="rapport-interrogatoire" data-kind="file" data-search="rapport_interrogatoire pdf document"><span class="item-menu">⋮</span><span class="file-preview pdf-preview">PDF</span><strong>Rapport_interrogatoire.pdf</strong><small>2.4 Mo · 18/05/2026</small><span class="file-badge pdf">PDF</span></button>
-              <button type="button" class="dossier-item file" data-id="camera-video" data-kind="file" data-search="camera_24 mp4 vidéo caméra"><span class="item-menu">⋮</span><span class="file-preview video-preview"><i>▶</i><em>02:45</em></span><strong>Camera_24_18-05-2026.mp4</strong><small>45.6 Mo · 18/05/2026</small><span class="file-badge video">MP4</span></button>
-              <button type="button" class="dossier-item file" data-id="audio-911" data-kind="file" data-search="enregistrement_911 mp3 audio appel radio"><span class="item-menu">⋮</span><span class="file-preview audio-preview"><i></i></span><strong>Enregistrement_911_01.mp3</strong><small>4.1 Mo · 17/05/2026</small><span class="file-badge audio">MP3</span></button>
-              <button type="button" class="dossier-item file" data-id="notes" data-kind="file" data-search="notes_rapides txt notes enquête"><span class="item-menu">⋮</span><span class="file-preview txt-preview">TXT</span><strong>Notes_rapides.txt</strong><small>1.1 Ko · 17/05/2026</small><span class="file-badge txt">TXT</span></button>
             </div>
           </article>
 
@@ -98,6 +89,6 @@ $username = (string) ($user['username'] ?? 'Agent');
     </div>
   </div>
   <script src="/mdt-sidebar.js?v=2"></script>
-  <script src="/dossiers.js?v=1"></script>
+  <script src="/dossiers.js?v=2"></script>
 </body>
 </html>

@@ -90,6 +90,61 @@
     });
   }
 
+  function closeDrawerWindow() {
+    const drawer = document.querySelector('#dossiersDrawer');
+    if (drawer) drawer.hidden = true;
+  }
+
+  function closeModalWindow() {
+    const backdrop = document.querySelector('#dossiersModalBackdrop');
+    if (backdrop) backdrop.hidden = true;
+  }
+
+  function closeConfirmWindow() {
+    const backdrop = document.querySelector('#dossiersConfirmBackdrop');
+    if (backdrop) backdrop.hidden = true;
+  }
+
+  function goToParentFromBackCard(event) {
+    const backCard = event.target.closest('.dossier-back-card');
+    if (!backCard) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    event.stopImmediatePropagation();
+
+    const breadcrumbButtons = Array.from(document.querySelectorAll('.dossiers-breadcrumb-button'));
+    const previousButton = breadcrumbButtons.length >= 2 ? breadcrumbButtons[breadcrumbButtons.length - 2] : breadcrumbButtons[0];
+
+    if (previousButton) {
+      previousButton.click();
+      return;
+    }
+
+    window.location.href = '/dossiers.php';
+  }
+
+  document.addEventListener('click', (event) => {
+    if (event.target.closest('#dossiersDrawer [data-close-drawer]')) {
+      event.preventDefault();
+      closeDrawerWindow();
+      return;
+    }
+
+    if (event.target.closest('#dossiersModalBackdrop [data-close-modal]')) {
+      event.preventDefault();
+      closeModalWindow();
+      return;
+    }
+
+    if (event.target.closest('#dossiersConfirmBackdrop [data-confirm-cancel]')) {
+      event.preventDefault();
+      closeConfirmWindow();
+    }
+  }, true);
+
+  document.addEventListener('dblclick', goToParentFromBackCard, true);
+
   const observer = new MutationObserver(initDragTargets);
   observer.observe(document.documentElement, {
     childList: true,

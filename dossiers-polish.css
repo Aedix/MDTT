@@ -1,0 +1,86 @@
+.dossiers-bulk-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid rgba(139, 160, 190, 0.22);
+  border-radius: 14px;
+  color: var(--mdt-text);
+  background: rgba(12, 18, 32, 0.94);
+}
+
+.dossiers-bulk-bar[hidden] {
+  display: none !important;
+}
+
+.dossiers-bulk-bar strong {
+  margin-right: auto;
+  font-size: 0.88rem;
+}
+
+.dossiers-bulk-bar button {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(139, 160, 190, 0.22);
+  border-radius: 10px;
+  color: var(--mdt-text);
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.dossiers-bulk-bar .danger {
+  color: #ffb3b3;
+  border-color: rgba(255, 107, 107, 0.28);
+  background: rgba(255, 107, 107, 0.12);
+}
+
+.dossier-item.is-bulk-selected {
+  border-color: rgba(96, 165, 250, 0.88) !important;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.24), 0 20px 55px rgba(96, 165, 250, 0.14) !important;
+}
+
+.dossiers-filter-panel {
+  position: fixed;
+  z-index: 85;
+  width: 280px;
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(139, 160, 190, 0.24);
+  border-radius: 16px;
+  background: rgba(8, 14, 25, 0.97);
+  box-shadow: 0 22px 70px rgba(0, 0, 0, 0.42);
+  backdrop-filter: blur(16px);
+}
+
+.dossiers-filter-panel[hidden] {
+  display: none !important;
+}
+
+.dossiers-filter-panel label {
+  display: grid;
+  gap: 6px;
+  color: var(--mdt-muted);
+  font-size: 0.78rem;
+}
+
+.dossiers-filter-panel select {
+  min-height: 38px;
+  padding: 8px 10px;
+  border: 1px solid rgba(139, 160, 190, 0.22);
+  border-radius: 10px;
+  color: var(--mdt-text);
+  background: rgba(3, 7, 18, 0.72);
+}
+
+.dossiers-filter-panel button {
+  min-height: 36px;
+  border: 1px solid rgba(139, 160, 190, 0.22);
+  border-radius: 10px;
+  color: var(--mdt-text);
+  background: rgba(255, 255, 255, 0.05);
+  cursor: pointer;
+  font-weight: 800;
+}

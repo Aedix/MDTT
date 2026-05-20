@@ -53,24 +53,54 @@
     }
   }
 
+  function ensureCounterBadges() {
+    document.querySelectorAll('.dossiers-quick-card[data-filter]').forEach((card) => {
+      if (card.querySelector('.quick-count-badge')) return;
+      const badge = document.createElement('span');
+      badge.className = 'quick-count-badge';
+      badge.textContent = '—';
+      badge.title = 'Compteur en cours de chargement';
+      card.appendChild(badge);
+    });
+  }
+
   function debounceCounts() {
     clearTimeout(state.countsTimer);
     state.countsTimer = setTimeout(loadCounts, 250);
   }
 
   async function loadCounts() {
+    ensureCounterBadges();
+
     try {
-      const response = await baseFetch('/api/dossiers_counts.php', { credentials: 'same-origin' });
+      const response = await baseFetch('/api/dossiers_counts.php', { credentials: 'same-origin', cache: 'no-store' });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok || payload.success === false) return;
+      if (!response.ok || payload.success === false) throw new Error(payload.message || 'Compteurs indisponibles.');
 
       Object.entries(payload.counts || {}).forEach(([view, count]) => {
-        const small = document.querySelector(`.dossiers-quick-card[data-filter="${view}"] small`);
-        if (!small) return;
-        small.textContent = `${Number(count || 0)} ${labels[view] || 'éléments'}`;
+        const card = document.querySelector(`.dossiers-quick-card[data-filter="${view}"]`);
+        if (!card) return;
+
+        const normalizedCount = Number(count || 0);
+        const badge = card.querySelector('.quick-count-badge');
+        const small = card.querySelector('small');
+
+        if (badge) {
+          badge.textContent = String(normalizedCount);
+          badge.title = `${normalizedCount} ${labels[view] || 'éléments'}`;
+          badge.dataset.loaded = 'true';
+        }
+
+        if (small) {
+          small.textContent = labels[view] || 'éléments';
+        }
       });
     } catch (error) {
-      // Non bloquant : un compteur ne doit jamais empêcher le module de fonctionner.
+      document.querySelectorAll('.quick-count-badge').forEach((badge) => {
+        badge.textContent = '!';
+        badge.title = 'Compteur indisponible : vérifie /api/dossiers_counts.php';
+        badge.dataset.error = 'true';
+      });
     }
   }
 
@@ -298,7 +328,7 @@
 
     try {
       const url = typeof args[0] === 'string' ? args[0] : args[0]?.url || '';
-      if (url.includes('/api/dossiers.php') || url.includes('/api/dossiers_views.php') || url.includes('/api/dossiers_move.php') || url.includes('/api/dossiers_extra.php')) {
+      if (url.includes('/api/dossiers.php') || url.includes('/api/dossiers_views.php') || url.includes('/api/dossiers_move.php') || url.includes('/api/dossiers_extra.php') || url.includes('/api/dossiers_bulk.php')) {
         scheduleAfterRender();
       }
     } catch (error) {}
@@ -310,6 +340,7 @@
     if (state.initialized) return;
     state.initialized = true;
 
+    ensureCounterBadges();
     ensureBulkBar();
     ensureFilterPanel();
 

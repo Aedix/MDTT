@@ -90,6 +90,7 @@ $username = (string) ($user['username'] ?? 'Agent');
     </div>
   </div>
   <script src="/mdt-sidebar.js?v=2"></script>
+  <script src="/dossiers-views.js?v=1"></script>
   <script src="/dossiers.js?v=2"></script>
   <script src="/dossiers-window.js?v=1"></script>
   <script src="/dossiers-advanced.js?v=2"></script>

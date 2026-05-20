@@ -1,0 +1,19 @@
+.dossier-item[draggable="true"] {
+  cursor: grab;
+}
+
+.dossier-item.is-drag-moving {
+  opacity: 0.48;
+  cursor: grabbing;
+}
+
+.dossier-item.is-drop-target {
+  border-color: rgba(124, 58, 237, 0.88) !important;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25), 0 20px 55px rgba(124, 58, 237, 0.18) !important;
+  transform: translateY(-2px);
+}
+
+.dossier-back-card.is-drop-target {
+  border-color: rgba(96, 165, 250, 0.9) !important;
+  box-shadow: 0 0 0 2px rgba(96, 165, 250, 0.24), 0 20px 55px rgba(96, 165, 250, 0.16) !important;
+}

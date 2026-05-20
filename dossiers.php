@@ -25,7 +25,8 @@ $username = (string) ($user['username'] ?? 'Agent');
   <link rel="stylesheet" href="/dossiers.css?v=1" />
   <link rel="stylesheet" href="/dossiers-fixes.css?v=4" />
   <link rel="stylesheet" href="/dossiers-cleanup.css?v=2" />
-  <link rel="stylesheet" href="/dossiers-drag-move.css?v=1" />
+  <link rel="stylesheet" href="/dossiers-drag-move.css?v=2" />
+  <link rel="stylesheet" href="/dossiers-notes-icons.css?v=1" />
 </head>
 <body class="mdt-body service-<?= htmlspecialchars(strtolower($activeServiceCode), ENT_QUOTES, 'UTF-8') ?>">
   <div class="mdt-shell">
@@ -93,6 +94,7 @@ $username = (string) ($user['username'] ?? 'Agent');
   <script src="/dossiers-window.js?v=1"></script>
   <script src="/dossiers-advanced.js?v=2"></script>
   <script src="/dossiers-cleanup.js?v=2"></script>
-  <script src="/dossiers-drag-move.js?v=1"></script>
+  <script src="/dossiers-drag-move.js?v=2"></script>
+  <script src="/dossiers-notes-icons.js?v=1"></script>
 </body>
 </html>
